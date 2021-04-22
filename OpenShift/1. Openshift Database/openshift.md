@@ -12,7 +12,6 @@ crc-xl2km-master-0   Ready    master,worker   12d   v1.20.0+bafe7
 ```bash
 ~ $ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
 08b1259c-5d51-4948-a2de-e2af8e6835a4 
-
 ```
 ###  Step 1.2: Get License
 
@@ -63,13 +62,14 @@ kube-system   kubedb-kubedb-enterprise-b658c95fc-kwqt6    1/1     Running   0   
 ```
 We can see the CRD Groups that have been registered by the operator by running the following command:
 ```bash
- oc get crd -l app.kubernetes.io/name=kubedb
+oc get crd -l app.kubernetes.io/name=kubedb
 ```
 
 # Step 2: Deploying Database
 
 > Now we can Install a number of common databases with the help of KubeDB.
 
+The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL and Redis.
 ## Deploying MySQL Database
 Let's first create a Namespace in which we will deploy the database.
 ```bash
@@ -119,8 +119,6 @@ This command will give the required permissions. </br>
 ### Deploy MySQL CRD
 Once these are handled correctly and the MySQL CRD is deployed you will see that the following are created:
 ```bash
-Every 2.0s: oc get all -n demo                                     Shohag: Wed Apr 21 13:19:10 2021
-
 NAME                     READY   STATUS    RESTARTS   AGE
 pod/mysql-quickstart-0   1/1     Running   0          31m
 
@@ -138,4 +136,194 @@ NAME                                VERSION     STATUS   AGE
 mysql.kubedb.com/mysql-quickstart   8.0.23-v1   Ready    31m
 ```
 
+> We have successfully deployed MySQL database in OpenShift. Now we can exec into the container to use the database or we can deploy phpMyAdmin container to use the GUI.
 
+## Accessing Database Through CLI
+
+To access the database through CLI we have to exec into the container:
+ ```bash
+oc exec -it -n demo mysql-quickstart-0 -- bash
+ ```
+ Then to login into mysql:
+ ```bash
+mysql -uroot -p${MYSQL_ROOT_PASSWORD}
+ ```
+Now we have entered into the MySQL CLI and we can create and delete as we want.
+
+## Accessing Database Through phpMyAdmin
+Apply the following yaml to deploy phpmyadmin into the cluster.
+ > oc apply -f myadmin.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myadmin
+  name: myadmin
+  namespace: demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myadmin
+  template:
+    metadata:
+      labels:
+        app: myadmin
+    spec:
+      containers:
+      - image: phpmyadmin/phpmyadmin:latest
+        imagePullPolicy: Always
+        name: phpmyadmin
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        env:
+          - name: PMA_ARBITRARY
+            value: '1'
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: myadmin
+  name: myadmin
+  namespace: demo
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: myadmin
+  type: LoadBalancer
+```
+Once this is deployed, we can connect to the MySQL server. The login credentials can be obtained by:
+```bash
+$ oc get pods mysql-quickstart-0 -n demo -o yaml | grep podIP
+
+  podIP: 10.244.0.18
+
+
+$ oc get secrets -n demo mysql-quickstart-auth -o jsonpath='{.data.\username}' | base64 -d
+
+root 
+
+$ oc get secrets -n demo mysql-quickstart-auth -o jsonpath='{.data.\password}' | base64 -d
+
+X1(YHS-gRkF2B~9b 
+
+```
+Hence, we can see that we can also easily deploy phpMyAdmin as the GUI of MySQL Server.
+
+> This was just one example of database deployment. The other databases that KubeDB suport are MongoDB, Elasticsearch, MariaDB, PostgreSQL and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+
+# Backup and Recover In OpenShift
+
+## Backup
+
+### Step 1: Install Stash
+Here we will use the kubedb license we obtained earlier.
+```bash
+helm install stash appscode/stash             \
+  --version v2021.04.12                  \
+  --namespace kube-system                       \
+  --set features.enterprise=true                \
+  --set-file global.license=/path/to/the/license.txt
+```
+verify installation:
+```bash
+oc get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+```
+### Step 2: Prepare Backend
+Stash supports various backends for storing data snapshots. It can be a cloud storage like GCS bucket, AWS S3, Azure Blob Storage etc. or a Kubernetes persistent volume like HostPath, PersistentVolumeClaim, NFS etc.
+
+For this tutorial we are goin to use gcs-bucket. You can find other setups [here](https://stash.run/docs/v2021.04.12/guides/latest/backends/overview/).
+ ![My GCS bucket](gcsEmptyBucket.png)
+ **Create Secret:**
+ ```bash
+~ $ echo -n 'YOURPASSWORD' > RESTIC_PASSWORD
+~ $ echo -n 'ackube' > GOOGLE_PROJECT_ID
+~ $ cat /home/ac/Downloads/ackube-87e4aa631714.json > GOOGLE_SERVICE_ACCOUNT_JSON_KEY
+~ $ oc create secret generic -n demo gcs-secret \
+        --from-file=./RESTIC_PASSWORD \
+        --from-file=./GOOGLE_PROJECT_ID \
+        --from-file=./GOOGLE_SERVICE_ACCOUNT_JSON_KEY
+ ```
+ ### Step 3: Create Repository
+
+```yaml
+apiVersion: stash.appscode.com/v1alpha1
+kind: Repository
+metadata:
+  name: gcs-repo
+  namespace: demo
+spec:
+  backend:
+    gcs:
+      bucket: stash-shohag
+      prefix: /demo/mysql/sample-mysql
+    storageSecretName: gcs-secret
+```
+let's watch the repository
+```bash
+watch oc get repository -n demo 
+```
+### Step 4: Create BackupConfiguration
+```yaml
+apiVersion: stash.appscode.com/v1beta1
+kind: BackupConfiguration
+metadata:
+  name: sample-mysql-backup
+  namespace: demo
+spec:
+  schedule: "*/5 * * * *"
+  repository:
+    name: gcs-repo
+  target:
+    ref:
+      apiVersion: appcatalog.appscode.com/v1alpha1
+      kind: AppBinding
+      name: mysql-quickstart
+  runtimeSettings:
+    container:
+      securityContext:
+        runAsUser: 1000610000
+        runAsGroup: 1000610000
+  retentionPolicy:
+    name: keep-last-5
+    keepLast: 5
+    prune: true
+```
+This BackupConfiguration creates a cronjob that backs up the specified database every 5 minutes.</br></br>
+So, after 5 minutes we can see the following status:
+
+![](backup.png)
+
+Now if we check our GCS bucket we can see that the backup has been successful.
+
+![](gcsSuccess.png)
+
+> **If You reached here CONGRATULATIONS!! The backup has been successful**. If you didn't its okay. You can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20OpenShift).
+
+
+## Recover
+We have to pause backup cronjob:
+```bash
+oc patch backupconfiguration -n demo sample-mysql-backup --type="merge" --patch='{"spec": {"paused": true}}'
+```
+In order to show that the recovery has been successful let's simulate accidental database deletion.
+
+![Delete Database](deleteDatabase.png)
+
+**Now let's start recovering the database.**
+### Step 1:
+
+
+![Recovery Succeeded](recoverSucceed.png)
+
+![Recovered Database](recoveredDB.png)

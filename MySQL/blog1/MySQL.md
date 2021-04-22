@@ -132,7 +132,7 @@ X1(YHS-gRkF2B~9b
 ```
 ## Step 5: Login to phpMyAdmin
 
-From the previous step, </br></br>
+From the previous step, we can see the output that we got was: </br></br>
 `Server : 10.244.0.18` </br>
 `Username: root`</br>
 `Password: X1(YHS-gRkF2B~9b`</br>
