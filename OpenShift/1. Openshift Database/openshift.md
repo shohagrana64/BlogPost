@@ -136,7 +136,7 @@ NAME                                VERSION     STATUS   AGE
 mysql.kubedb.com/mysql-quickstart   8.0.23-v1   Ready    31m
 ```
 
-> We have successfully deployed MySQL database in OpenShift. Now we can exec into the container to use the database or we can deploy phpMyAdmin container to use the GUI.
+> We have successfully deployed MySQL database in OpenShift. Now we can exec into the container to use the database.
 
 ## Accessing Database Through CLI
 
@@ -149,76 +149,6 @@ oc exec -it -n demo mysql-quickstart-0 -- bash
 mysql -uroot -p${MYSQL_ROOT_PASSWORD}
  ```
 Now we have entered into the MySQL CLI and we can create and delete as we want.
-
-## Accessing Database Through phpMyAdmin
-Apply the following yaml to deploy phpmyadmin into the cluster.
- > oc apply -f myadmin.yaml
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: myadmin
-  name: myadmin
-  namespace: demo
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: myadmin
-  template:
-    metadata:
-      labels:
-        app: myadmin
-    spec:
-      containers:
-      - image: phpmyadmin/phpmyadmin:latest
-        imagePullPolicy: Always
-        name: phpmyadmin
-        ports:
-        - containerPort: 80
-          name: http
-          protocol: TCP
-        env:
-          - name: PMA_ARBITRARY
-            value: '1'
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: myadmin
-  name: myadmin
-  namespace: demo
-spec:
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: http
-  selector:
-    app: myadmin
-  type: LoadBalancer
-```
-Once this is deployed, we can connect to the MySQL server. The login credentials can be obtained by:
-```bash
-$ oc get pods mysql-quickstart-0 -n demo -o yaml | grep podIP
-
-  podIP: 10.244.0.18
-
-
-$ oc get secrets -n demo mysql-quickstart-auth -o jsonpath='{.data.\username}' | base64 -d
-
-root 
-
-$ oc get secrets -n demo mysql-quickstart-auth -o jsonpath='{.data.\password}' | base64 -d
-
-X1(YHS-gRkF2B~9b 
-
-```
-Hence, we can see that we can also easily deploy phpMyAdmin as the GUI of MySQL Server.
 
 > This was just one example of database deployment. The other databases that KubeDB suport are MongoDB, Elasticsearch, MariaDB, PostgreSQL and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
 
@@ -321,9 +251,44 @@ In order to show that the recovery has been successful let's simulate accidental
 ![Delete Database](deleteDatabase.png)
 
 **Now let's start recovering the database.**
-### Step 1:
-
+### Step 1: Create a RestoreSession
+```yaml
+apiVersion: stash.appscode.com/v1beta1
+kind: RestoreSession
+metadata:
+  name: sample-mysql-restore
+  namespace: demo
+spec:
+  repository:
+    name: gcs-repo
+  target:
+    ref:
+      apiVersion: appcatalog.appscode.com/v1alpha1
+      kind: AppBinding
+      name: mysql-quickstart
+  runtimeSettings:
+    container:
+      securityContext:
+        runAsUser: 1000610000
+        runAsGroup: 1000610000
+  rules:
+    - snapshots: [latest]
+```
+Once this is applied, a RestoreSession will be created. Once it has succeeded, the database has been successfully recovered as you can see in the images below:
 
 ![Recovery Succeeded](recoverSucceed.png)
 
 ![Recovered Database](recoveredDB.png)
+
+> Thus we have successfully recovered the MySQL database.
+
+
+## Support
+
+To speak with us, please leave a message on [our website](https://appscode.com/contact/).
+
+To join public discussions with the KubeDB community, join us in the [Kubernetes Slack team](https://kubernetes.slack.com/messages/C8149MREV/) channel `#kubedb`. To sign up, use our [Slack inviter](http://slack.kubernetes.io/).
+
+To receive product announcements, follow us on [Twitter](https://twitter.com/KubeDB).
+
+If you have found a bug with KubeDB or want to request for new features, please [file an issue](https://github.com/kubedb/project/issues/new).
