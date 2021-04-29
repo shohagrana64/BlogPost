@@ -1,0 +1,20 @@
+apiVersion: kubedb.com/v1alpha2
+kind: Postgres
+metadata:
+  name: quick-postgres
+  namespace: demo
+spec:
+  version: "13.2-debian"
+  storageType: Durable
+  storage:
+    storageClassName: "local-path"
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  podTemplate: 
+    spec:
+      containerSecurityContext: 
+        runAsUser: 1000610001
+  terminationPolicy: WipeOut
