@@ -7,7 +7,7 @@ spec:
   version: "13.2-debian"
   storageType: Durable
   storage:
-    storageClassName: "local-path"
+    # storageClassName: "local-path"
     accessModes:
     - ReadWriteOnce
     resources:
@@ -16,5 +16,6 @@ spec:
   podTemplate: 
     spec:
       containerSecurityContext: 
-        runAsUser: 1000610001
+        runAsUser: 1000610000
+        # runAsGroup: 1000610000
   terminationPolicy: WipeOut
