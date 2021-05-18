@@ -166,12 +166,12 @@ Here is the yaml of the MariaDB CRD we are going to use:
 
 ```yaml
 apiVersion: kubedb.com/v1alpha2
-kind: MongoDB
+kind: MariaDB
 metadata:
-  name: mgo-quickstart
+  name: sample-mariadb
   namespace: demo
 spec:
-  version: "4.2.3"
+  version: "10.5.8"
   storageType: Durable
   storage:
     accessModes:
@@ -185,9 +185,9 @@ spec:
 Let's save this yaml configuration into MariaDB.yaml. Then apply using the command
 `oc apply -f MariaDB.yaml`
 
-This yaml uses MonngoDB CRD.
+This yaml uses MariaDB CRD.
 
-* In this yaml we can see in the `spec.version` field the version of Postgres. You can change and get updated version by running `oc get postgresversions` command.
+* In this yaml we can see in the `spec.version` field the version of MariaDB. You can change and get updated version by running `oc get mariadbversions` command.
 * Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
 * `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
 * Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/postgres/concepts/postgres/#specterminationpolicy).
@@ -199,20 +199,20 @@ Once these are handled correctly and the MariaDB CRD is deployed you will see th
 ```bash
 $ oc get all -n demo
 NAME                   READY   STATUS    RESTARTS   AGE
-pod/mgo-quickstart-0   1/1     Running   0          5m49s
+pod/sample-mariadb-0   1/1     Running   0          22h
 
-NAME                          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)     AGE
-service/mgo-quickstart        ClusterIP   10.217.4.198   <none>        27017/TCP   5m50s
-service/mgo-quickstart-pods   ClusterIP   None           <none>        27017/TCP   5m50s
+NAME                          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/sample-mariadb        ClusterIP   10.217.5.207   <none>        3306/TCP   22h
+service/sample-mariadb-pods   ClusterIP   None           <none>        3306/TCP   22h
 
 NAME                              READY   AGE
-statefulset.apps/mgo-quickstart   1/1     5m52s
+statefulset.apps/sample-mariadb   1/1     22h
 
 NAME                                                TYPE                 VERSION   AGE
-appbinding.appcatalog.appscode.com/mgo-quickstart   kubedb.com/mongodb   4.2.3     5m23s
+appbinding.appcatalog.appscode.com/sample-mariadb   kubedb.com/mariadb   10.5.8    22h
 
 NAME                                VERSION   STATUS   AGE
-mongodb.kubedb.com/mgo-quickstart   4.2.3     Ready    6m
+mariadb.kubedb.com/sample-mariadb   10.5.8    Ready    22h
 ```
 
 > We have successfully deployed MariaDB in OpenShift. Now we can exec into the container to use the database.
@@ -222,51 +222,77 @@ mongodb.kubedb.com/mgo-quickstart   4.2.3     Ready    6m
 To access the database through CLI we have to exec into the container:
 
  ```bash
-$ oc  get secrets -n demo mgo-quickstart-auth -o jsonpath='{.data.\username}' | base64 -d
-root                                                                   
-$ oc  get secrets -n demo mgo-quickstart-auth -o jsonpath='{.data.\password}' | base64 -d
-ay=bql8jD5Y;SKrF⏎                                                                      $ oc exec -it mgo-quickstart-0 -n demo sh
-kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
- ```
+$ oc get secrets -n demo sample-mariadb-auth -o jsonpath='{.data.\username}' | base64 -d
+root
+$ oc get secrets -n demo sample-mariadb-auth -o jsonpath='{.data.\password}' | base64 -d
+9fe(zT;WRUj-N(cU
+$ oc exec -it -n demo sample-mariadb-0 -- mariadb -u root --password='9fe(zT;WRUj-N(cU'
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 8090
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
 
- Then to login into MariaDB:
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
 
-```bash
-$ mongo admin
-MongoDB shell version v4.2.3
-connecting to: mongodb://127.0.0.1:27017/admin?compressors=disabled&gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("60091063-f4c0-45af-aec9-ef9463cc1a5f") }
-MongoDB server version: 4.2.3
-Welcome to the MongoDB shell.
-For interactive help, type "help".
-For more comprehensive documentation, see
-	http://docs.mongodb.org/
-Questions? Try the support group
-	http://groups.google.com/group/mongodb-user
-2021-05-06T05:37:34.907+0000 I  STORAGE  [main] In File::open(), ::open for '//.mongorc.js' failed with Permission denied
-> db.auth("root","ay=bql8jD5Y;SKrF")
-1
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> 
  ```
 
 Now we have entered into the MariaDB CLI and we can create and delete as we want.
-let's create a database and create a test table called movie:
+let's create a database and create a test table called company and insert some dummy values into the table:
 
 ```bash
-> show dbs
-admin   0.000GB
-config  0.000GB
-local   0.000GB
-> use testdb
-switched to db testdb
-> db.movie.insert({"name":"batman"});
-WriteResult({ "nInserted" : 1 })
-> db.movie.find().pretty()
-{ "_id" : ObjectId("6093810e104a7bd2911ec415"), "name" : "batman" }
-> exit
-bye
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+3 rows in set (0.002 sec)
+
+MariaDB [(none)]> create database company;
+Query OK, 1 row affected (0.000 sec)
+
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| company            |
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.000 sec)
+
+MariaDB [(none)]> create table company.employees ( name varchar(50), salary int);
+Query OK, 0 rows affected (0.008 sec)
+
+MariaDB [(none)]> show tables in company;
++-------------------+
+| Tables_in_company |
++-------------------+
+| employees         |
++-------------------+
+1 row in set (0.000 sec)
+
+MariaDB [(none)]> insert into company.employees values ('John Doe', 5000);
+Query OK, 1 row affected (0.002 sec)
+
+MariaDB [(none)]> select * from company.employees;
++----------+--------+
+| name     | salary |
++----------+--------+
+| John Doe |   5000 |
++----------+--------+
+1 row in set (0.000 sec)
+
+MariaDB [(none)]> exit
+Bye
 ```
 
-> This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MariaDB and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+> This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MongoDB and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
 
 ## Backup and Recover Database Using Stash
 
@@ -324,7 +350,7 @@ spec:
   backend:
     gcs:
       bucket: YOURBUCKETNAME
-      prefix: /demo/mongoDB/sample-mongo
+      prefix: /demo/mariaDB/sample-maria-backup
     storageSecretName: gcs-secret
 ```
 
@@ -363,9 +389,9 @@ Notice that the BackupConfiguration contains `spec.runtimeSettings.container.sec
 So, after 5 minutes we can see the following status:
 
 ```bash
-$ oc get backupsession -n demo                                 
+$ oc get backupsession -n demo
 NAME                               INVOKER-TYPE          INVOKER-NAME            PHASE       AGE
-sample-mongodb-backup-1620282013   BackupConfiguration   sample-mongodb-backup   Succeeded   2m40s
+sample-mariadb-backup-1620449711   BackupConfiguration   sample-mariadb-backup   Succeeded   99s
 ```
 
 Now if we check our GCS bucket we can see that the backup has been successful.
@@ -380,41 +406,49 @@ Let's think of a scenario in which the database has been accidentally deleted or
 In such a case, we have to pause the BackupConfiguration so that the failed/damaged database does not get backed up into the cloud:
 
 ```bash
-oc patch backupconfiguration -n demo sample-mongodb-backup --type="merge" --patch='{"spec": {"paused": true}}'
+oc patch backupconfiguration -n demo sample-mariadb-backup --type="merge" --patch='{"spec": {"paused": true}}'
 ```
 
 At first let's simulate accidental database deletion.
 
 ```bash
-$ oc exec -it mgo-quickstart-0 -n demo sh
-kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
-$ mongo admin
-MongoDB shell version v4.2.3
-connecting to: mongodb://127.0.0.1:27017/admin?compressors=disabled&gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("6185c112-ccfd-44f6-828d-cdca7435372e") }
-MongoDB server version: 4.2.3
-Welcome to the MongoDB shell.
-For interactive help, type "help".
-For more comprehensive documentation, see
-	http://docs.mongodb.org/
-Questions? Try the support group
-	http://groups.google.com/group/mongodb-user
-2021-05-06T06:28:38.418+0000 I  STORAGE  [main] In File::open(), ::open for '//.mongorc.js' failed with Permission denied
-> db.auth("root","ay=bql8jD5Y;SKrF")
-1
-> show dbs
-admin   0.000GB
-config  0.000GB
-local   0.000GB
-testdb  0.000GB
-> use testdb
-switched to db testdb
-> db.dropDatabase()
-{ "dropped" : "testdb", "ok" : 1 }
-> show dbs
-admin   0.000GB
-config  0.000GB
-local   0.000GB
+~ $ oc exec -it -n demo sample-mariadb-0 -c mariadb -- bash
+groups: cannot find name for group ID 1000610000
+1000610000@sample-mariadb-0:/$ mysql -u${MYSQL_ROOT_USERNAME} -p${MYSQL_ROOT_PASSWORD}
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 8233
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| company            |
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.000 sec)
+
+MariaDB [(none)]> drop database company;
+Query OK, 1 row affected (0.004 sec)
+
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+3 rows in set (0.000 sec)
+
+MariaDB [(none)]> exit
+Bye
 ```
 
 ### Step 1: Create a RestoreSession
@@ -450,20 +484,52 @@ Once this is applied, a RestoreSession will be created. Once it has succeeded, t
 ```bash
 $ oc get restoresession -n demo
 NAME                     REPOSITORY   PHASE       AGE
-sample-mongodb-restore   gcs-repo     Succeeded   95s
-
+sample-mariadb-restore   gcs-repo     Succeeded   23s
 ```
 
 Now let's check whether the database has been correctly restored:
 
 ```bash
-> show dbs
-admin   0.000GB
-config  0.000GB
-local   0.000GB
-testdb  0.000GB
-> db.movie.find().pretty()
-{ "_id" : ObjectId("60938f7a2bfe705fb488fb17"), "name" : "batman" }
+~ $ oc exec -it -n demo sample-mariadb-0 -c mariadb -- bash
+groups: cannot find name for group ID 1000610000
+1000610000@sample-mariadb-0:/$ mysql -u${MYSQL_ROOT_USERNAME} -p${MYSQL_ROOT_PASSWORD}
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 8272
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| company            |
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.000 sec)
+
+MariaDB [(none)]> show tables in company;
++-------------------+
+| Tables_in_company |
++-------------------+
+| employees         |
++-------------------+
+1 row in set (0.001 sec)
+
+MariaDB [(none)]> select * from company.employees;
++----------+--------+
+| name     | salary |
++----------+--------+
+| John Doe |   5000 |
++----------+--------+
+1 row in set (0.001 sec)
+
+MariaDB [(none)]> Bye
+1000610000@sample-mariadb-0:/$ exit
 ```
 
 > The recovery has been successful. If you faced any difficulties in the recovery process you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20OpenShift).
