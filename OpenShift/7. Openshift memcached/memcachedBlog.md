@@ -1,5 +1,5 @@
 ---
-title: How to Manage Redis in Openshift Using KubeDB
+title: How to Manage Memcached in Openshift Using KubeDB
 date: 2021-04-23
 weight: 22
 authors:
@@ -20,8 +20,8 @@ tags:
 
 ## Overview
 
-The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
-In this tutorial we will deploy Redis database. We will cover the following steps:
+The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL, Memcached and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
+In this tutorial we will deploy Memcached database. We will cover the following steps:
 
 1) Install KubeDB
 2) Deploy Database
@@ -123,14 +123,14 @@ redisversions.catalog.kubedb.com                  2021-04-21T04:02:49Z
 
 ## Step 2: Deploying Database
 
-Now we are going to Install Redis with the help of KubeDB.
+Now we are going to Install Memcached with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
 
 ```bash
 $ oc create ns demo
 ```
 
-Now, before deploying the Redis CRD let's perform some checks to ensure that it is deployed correctly.
+Now, before deploying the Memcached CRD let's perform some checks to ensure that it is deployed correctly.
 
 ### Check 1: StorageClass check
 
@@ -159,7 +159,7 @@ $ oc adm policy add-scc-to-user privileged system:serviceaccount:local-path-stor
 ```
 
 This command will give the required permissions. </br>
-Here is the yaml of the Redis CRD we are going to use:
+Here is the yaml of the Memcached CRD we are going to use:
 
 ```yaml
 apiVersion: kubedb.com/v1alpha2
@@ -179,19 +179,19 @@ spec:
   terminationPolicy: WipeOut
 ```
 
-Let's save this yaml configuration into redis.yaml. Then apply using the command
-`oc apply -f redis.yaml`
+Let's save this yaml configuration into memcached.yaml. Then apply using the command
+`oc apply -f memcached.yaml`
 
-This yaml uses Redis CRD.
+This yaml uses Memcached CRD.
 
-* In this yaml we can see in the `spec.version` field the version of Redis. You can change and get updated version by running `oc get redisversions` command.
+* In this yaml we can see in the `spec.version` field the version of Memcached. You can change and get updated version by running `oc get memcachedversions` command.
 * Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
 * `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
-* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/redis/concepts/redis/#specterminationpolicy).
+* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/memcached/concepts/memcached/#specterminationpolicy).
 
-### Deploy Redis CRD
+### Deploy Memcached CRD
 
-Once these are handled correctly and the Redis CRD is deployed you will see that the following are created:
+Once these are handled correctly and the Memcached CRD is deployed you will see that the following are created:
 
 ```bash
 $ oc get all -n demo

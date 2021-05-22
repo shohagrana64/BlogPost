@@ -1,15 +1,25 @@
 apiVersion: kubedb.com/v1alpha2
 kind: Redis
 metadata:
-  name: redis-quickstart
+  name: redis-cluster
   namespace: demo
 spec:
   version: 6.0.6
+  mode: Cluster
+  cluster:
+    master: 3
+    replicas: 1
+  podTemplate:
+    spec:
+      resources:
+        limits:
+          cpu: 200m
+          memory: 300Mi
   storageType: Durable
   storage:
-    accessModes:
-    - ReadWriteOnce
     resources:
       requests:
         storage: 1Gi
+    accessModes:
+    - ReadWriteOnce
   terminationPolicy: WipeOut
