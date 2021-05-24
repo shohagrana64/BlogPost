@@ -20,11 +20,12 @@ tags:
 
 ## Overview
 
-The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
+The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL, Memcached and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
 In this tutorial we will deploy Redis database. We will cover the following steps:
 
 1) Install KubeDB
-2) Deploy Database
+2) Deploy Redis Cluster
+3) See the Automatic Failover feature
 
 ## Step 1: Installing KubeDB
 
@@ -165,17 +166,27 @@ Here is the yaml of the Redis CRD we are going to use:
 apiVersion: kubedb.com/v1alpha2
 kind: Redis
 metadata:
-  name: redis-quickstart
+  name: redis-cluster
   namespace: demo
 spec:
   version: 6.0.6
+  mode: Cluster
+  cluster:
+    master: 3
+    replicas: 1
+  podTemplate:
+    spec:
+      resources:
+        limits:
+          cpu: 200m
+          memory: 300Mi
   storageType: Durable
   storage:
-    accessModes:
-    - ReadWriteOnce
     resources:
       requests:
         storage: 1Gi
+    accessModes:
+    - ReadWriteOnce
   terminationPolicy: WipeOut
 ```
 
@@ -186,7 +197,6 @@ This yaml uses Redis CRD.
 
 * In this yaml we can see in the `spec.version` field the version of Redis. You can change and get updated version by running `oc get redisversions` command.
 * Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
-* `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
 * Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/redis/concepts/redis/#specterminationpolicy).
 
 ### Deploy Redis CRD
@@ -194,22 +204,29 @@ This yaml uses Redis CRD.
 Once these are handled correctly and the Redis CRD is deployed you will see that the following are created:
 
 ```bash
-$ oc get all -n demo
-NAME                     READY   STATUS    RESTARTS   AGE
-pod/redis-quickstart-0   1/1     Running   0          4m36s
+~ $ oc get all -n demo
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/redis-cluster-shard0-0   1/1     Running   0          27h
+pod/redis-cluster-shard0-1   1/1     Running   0          27h
+pod/redis-cluster-shard1-0   1/1     Running   0          27h
+pod/redis-cluster-shard1-1   1/1     Running   0          27h
+pod/redis-cluster-shard2-0   1/1     Running   0          27h
+pod/redis-cluster-shard2-1   1/1     Running   0          27h
 
-NAME                            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/redis-quickstart        ClusterIP   10.217.4.254   <none>        6379/TCP   4m37s
-service/redis-quickstart-pods   ClusterIP   None           <none>        6379/TCP   4m37s
+NAME                         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/redis-cluster        ClusterIP   10.217.5.200   <none>        6379/TCP   27h
+service/redis-cluster-pods   ClusterIP   None           <none>        6379/TCP   27h
 
-NAME                                READY   AGE
-statefulset.apps/redis-quickstart   1/1     4m39s
+NAME                                    READY   AGE
+statefulset.apps/redis-cluster-shard0   2/2     27h
+statefulset.apps/redis-cluster-shard1   2/2     27h
+statefulset.apps/redis-cluster-shard2   2/2     27h
 
-NAME                                                  TYPE               VERSION   AGE
-appbinding.appcatalog.appscode.com/redis-quickstart   kubedb.com/redis   6.0.6     4m5s
+NAME                                               TYPE               VERSION   AGE
+appbinding.appcatalog.appscode.com/redis-cluster   kubedb.com/redis   6.0.6     27h
 
-NAME                                VERSION   STATUS   AGE
-redis.kubedb.com/redis-quickstart   6.0.6     Ready    4m48s
+NAME                             VERSION   STATUS   AGE
+redis.kubedb.com/redis-cluster   6.0.6     Ready    27h
 ```
 
 > We have successfully deployed Redis in OpenShift. Now we can exec into the container to use the database.
@@ -219,22 +236,33 @@ redis.kubedb.com/redis-quickstart   6.0.6     Ready    4m48s
 To access the database through CLI we have to exec into the container:
 
  ```bash
-~ $ oc exec -it redis-quickstart-0 -n demo sh
-kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
-/data $ redis-cli
-127.0.0.1:6379> ping
-PONG
-127.0.0.1:6379> SET mykey "Hello"
+ # This command shows all the IP's of the redis pods
+$ oc get pods --all-namespaces -o jsonpath='{range.items[*]}{.metadata.name} ---------- {.status.podIP}:6379{"\\n"}{end}' | grep redis
+redis-cluster-shard0-0 ---------- 10.217.0.108:6379
+redis-cluster-shard0-1 ---------- 10.217.0.109:6379
+redis-cluster-shard1-0 ---------- 10.217.0.111:6379
+redis-cluster-shard1-1 ---------- 10.217.0.112:6379
+redis-cluster-shard2-0 ---------- 10.217.0.113:6379
+redis-cluster-shard2-1 ---------- 10.217.0.114:6379
+
+# exec into any master pod
+~ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- redis-cli -c cluster keyslot hello
+(integer) 866
+~ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
+/data $ redis-cli -c -h 10.217.0.108
+10.217.0.108:6379> set hello world
 OK
-127.0.0.1:6379> get mykey
-"Hello"
-127.0.0.1:6379> exit
+10.217.0.108:6379> get hello
+"world"
+10.217.0.108:6379> exit
  ```
 
 Now we have entered into the Redis CLI and we can create and delete as we want.
-redis stores data as key value pair. In the above commands, we set mykey to "Hello".
+redis stores data as key value pair. In the above commands, we set hello to "world".
 
 > This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+
+## Redis Clustering Features
 
 ## Support
 
