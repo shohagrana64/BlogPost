@@ -233,23 +233,35 @@ redis.kubedb.com/redis-cluster   6.0.6     Ready    27h
 
 ## Accessing Database Through CLI
 
-To access the database through CLI we have to exec into the container:
+To access the database through CLI we have to connect to any redis node. Then we
 
  ```bash
  # This command shows all the IP's of the redis pods
 $ oc get pods --all-namespaces -o jsonpath='{range.items[*]}{.metadata.name} ---------- {.status.podIP}:6379{"\\n"}{end}' | grep redis
-redis-cluster-shard0-0 ---------- 10.217.0.108:6379
-redis-cluster-shard0-1 ---------- 10.217.0.109:6379
-redis-cluster-shard1-0 ---------- 10.217.0.111:6379
-redis-cluster-shard1-1 ---------- 10.217.0.112:6379
-redis-cluster-shard2-0 ---------- 10.217.0.113:6379
-redis-cluster-shard2-1 ---------- 10.217.0.114:6379
+redis-cluster-shard0-0 ---------- 10.217.0.9:6379
+redis-cluster-shard0-1 ---------- 10.217.0.28:6379
+redis-cluster-shard1-0 ---------- 10.217.0.33:6379
+redis-cluster-shard1-1 ---------- 10.217.0.43:6379
+redis-cluster-shard2-0 ---------- 10.217.0.29:6379
+redis-cluster-shard2-1 ---------- 10.217.0.21:6379
 
-# exec into any master pod
-~ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- redis-cli -c cluster keyslot hello
-(integer) 866
+
+# This command shows the roles of each of the pods of Redis:
+/data $ redis-cli -c cluster nodes
+bb690f0802a203d8106139397febfa586c707b77 10.217.0.21:6379@16379 slave c9f383c2176a9da2fbda64bab379d0680a10d972 0 1621833286000 25 connected
+a3bf9b4dbdf3b6877b81c462aa9ec3c0a651aa52 10.217.0.28:6379@16379 slave dcead4ade01632fe376466274345b0d9e846cfcf 0 1621833286000 23 connected
+dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.9:6379@16379 myself,master - 0 1621833286000 23 connected 0-5460
+e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621833286000 21 connected 5461-10922
+c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621833286912 25 connected 10923-16383
+d9410e5a6f9d85b32aa8d4bfd73d7007be61b3c8 10.217.0.43:6379@16379 slave e3f2085ee716bacf17a298081bfa29a1454a8a87 0 1621833285007 21 connected
+
+# connect to any node
 ~ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
+
+# connect to any master pod
 /data $ redis-cli -c -h 10.217.0.108
+
+# set key 'hello' to value 'world'
 10.217.0.108:6379> set hello world
 OK
 10.217.0.108:6379> get hello
@@ -260,9 +272,36 @@ OK
 Now we have entered into the Redis CLI and we can create and delete as we want.
 redis stores data as key value pair. In the above commands, we set hello to "world".
 
-> This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
-
 ## Redis Clustering Features
+
+There are 2 main features of Clustering which are `Data Availability` and `Automatic Failover`. These are shown below:
+
+### Data Availability
+
+In this section, we will see whether we can get the data from any other node (any master or replica) or not.
+We can notice the replication of data among the other pods of Redis:
+
+```bash
+# switch the connection to the replica of the current master and get the data
+/data $ redis-cli -c -h 10.217.0.28
+10.217.0.28:6379> get hello
+-> Redirected to slot [866] located at 10.217.0.9:6379
+"world"
+10.217.0.9:6379> exit
+
+# switch the connection to any other node
+# get the data
+/data $ redis-cli -c -h 10.217.0.43
+10.217.0.43:6379> get hello
+-> Redirected to slot [866] located at 10.217.0.9:6379
+"world"
+```
+
+### Automatic Failover
+
+To test automatic failover, we will force a master node to restart. Since the master node (`pod`) becomes unavailable, the rest of the members will elect a replica (one of its replica in case of more than one replica under this master) of this master node as the new master. When the old master comes back, it will join the cluster as the new replica of the new master.
+
+> This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
 
 ## Support
 
