@@ -310,12 +310,14 @@ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
 dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.9:6379@16379 myself,master - 0 1621916192000 23 connected 0-5460
 e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621916193064 21 connected 5461-10922
 c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621916193566 25 connected 10923-16383
+
 # let's crash node 10.217.0.9 with the `DEBUG SEGFAULT` command
 /data $ redis-cli -h 10.217.0.9 debug segfault
 Error: Server closed the connection
 command terminated with exit code 137
+
 # now again connect to a node and get the master nodes info
-~ $ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
+$ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
 /data $ redis-cli -c cluster nodes | grep master
 e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621931346000 21 connected 5461-10922
 dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.28:6379@16379 master - 0 1621931347000 27 connected 0-5460
