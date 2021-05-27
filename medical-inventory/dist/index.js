@@ -37,6 +37,8 @@ app.use(express_1.default.json());
 // Configure Express to use EJS
 app.set("views", path_1.default.join(__dirname, "views"));
 app.set("view engine", "ejs");
+// Configure Express to serve static files in the public folder
+app.use(express_1.default.static(path_1.default.join(__dirname, "public")));
 // define a route handler for the default home page
 // app.get( "/", ( req, res ) => {
 //     // render the index template
