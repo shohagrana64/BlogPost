@@ -25,7 +25,8 @@ const register = (app) => {
     const oidc = app.locals.oidc;
     // define a route handler for the default home page
     app.get("/", (req, res) => {
-        res.render("index");
+        const user = req.userContext ? req.userContext.userinfo : null;
+        res.render("index", { isAuthenticated: req.isAuthenticated(), user });
     });
     // define a secure route handler for the login page that redirects to /guitars
     app.get("/login", oidc.ensureAuthenticated(), (req, res) => {
@@ -38,7 +39,8 @@ const register = (app) => {
     });
     // define a secure route handler for the guitars page
     app.get("/guitars", (req, res) => {
-        res.render("guitars");
+        const user = req.userContext ? req.userContext.userinfo : null;
+        res.render("guitars", { isAuthenticated: req.isAuthenticated(), user });
     });
     api.register(app);
 };
