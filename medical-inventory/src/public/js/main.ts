@@ -50,15 +50,15 @@ new Vue( {
         },
         confirmDeleteGuitar( id: string ) {
             const guitar = this.guitars.find( ( g ) => g.id === id );
-            this.selectedGuitar = `${ guitar.year } ${ guitar.brand } ${ guitar.model }`;
-            this.selectedGuitarId = guitar.id;
+            this.selectedGuitar = `${ guitar.Name } ${ guitar.TypeId } ${ guitar.Comment }`;
+            this.selectedGuitarId = guitar.BrandId;
             const dc = this.$refs.deleteConfirm;
             const modal = M.Modal.init( dc );
             modal.open();
         },
         deleteGuitar( id: string ) {
             axios
-                .delete( `/api/guitars/remove/${ id }` )
+                .delete( `/api/modeldata/remove/${ id }` )
                 .then( this.loadGuitars )
                 .catch( ( err: any ) => {
                     // tslint:disable-next-line:no-console
@@ -67,7 +67,7 @@ new Vue( {
         },
         loadGuitars() {
             axios
-                .get( "/api/guitars/all" )
+                .get( "/api/modeltype" )
                 .then( ( res: any ) => {
                     this.isLoading = false;
                     this.guitars = res.data;

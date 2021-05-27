@@ -1,4 +1,5 @@
 import * as express from "express";
+import { URLSearchParams } from "url";
 
 export const register = ( app: express.Application ) => {
     const oidc = app.locals.oidc;
@@ -9,18 +10,62 @@ export const register = ( app: express.Application ) => {
         port,
         user: process.env.PGUSER || "postgres"
     };
+    type MyDevices = {
+        BrandId: string;
+        Name: string;
+        TypeId: number;
+        Comment: string;
+    }
+    let arr: MyDevices[] = [
+        { "BrandId": "test1", "Name": "testy","TypeId": 0, "Comment": "NoComment" },
+        { "BrandId": "test2", "Name": "testy1","TypeId": 1, "Comment": "NoComment" },
+        { "BrandId": "test3", "Name": "testy2","TypeId": 2, "Comment": "NoComment" }
+    ];
 
-    app.get( `/api/guitars/all`, ( req: any, res ) => {
+    app.get( `/api/modeltype`, ( req: any, res ) => {
         try {
-            // const userId = req.userContext.userinfo.sub;
-            const guitars = 1;
-            return res.json( guitars );
+            return res.json( arr );
         } catch ( err ) {
             // tslint:disable-next-line:no-console
             console.error(err);
             res.json( { error: err.message || err } );
         }
     } );
+
+    app.get( `/api/modeldata/:id`, ( req: any, res ) => {
+        try {
+            for (const val of arr) {
+                if(val.BrandId===req.params.id){
+                    return res.json(val);
+                }
+            }
+        } catch ( err ) {
+            // tslint:disable-next-line:no-console
+            console.error(err);
+            res.json( { error: err.message || err } );
+        }
+    } );
+
+    app.delete( `/api/modeldata/remove/:id`, ( req: any, res ) => {
+        try {
+            for ( const val of arr) {
+                if(val.BrandId===req.params.id){
+                    const index = arr.indexOf(val);
+                    const newArray = (index > -1) ? [
+                        ...arr.slice(0, index),
+                        ...arr.slice(index + 1)
+                    ] : arr;
+                    arr=newArray;
+                    return res.json(newArray);
+                }
+            }
+        } catch ( err ) {
+            // tslint:disable-next-line:no-console
+            console.error(err);
+            res.json( { error: err.message || err } );
+        }
+    } );
+
 
     // app.get( `/api/guitars/total`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
     //     try {
@@ -41,27 +86,6 @@ export const register = ( app: express.Application ) => {
     //     }
     // } );
 
-    // app.get( `/api/guitars/find/:search`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
-    //     try {
-    //         const userId = req.userContext.userinfo.sub;
-    //         const guitars = await db.any( `
-    //             SELECT
-    //                 id
-    //                 , brand
-    //                 , model
-    //                 , year
-    //                 , color
-    //             FROM    guitars
-    //             WHERE   user_id = $[userId]
-    //             AND   ( brand ILIKE $[search] OR model ILIKE $[search] )`,
-    //             { userId, search: `%${ req.params.search }%` } );
-    //         return res.json( guitars );
-    //     } catch ( err ) {
-    //         // tslint:disable-next-line:no-console
-    //         console.error(err);
-    //         res.json( { error: err.message || err } );
-    //     }
-    // } );
 
     // app.post( `/api/guitars/add`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
     //     try {
@@ -102,20 +126,5 @@ export const register = ( app: express.Application ) => {
     //     }
     // } );
 
-    // app.delete( `/api/guitars/remove/:id`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
-    //     try {
-    //         const userId = req.userContext.userinfo.sub;
-    //         const id = await db.result( `
-    //             DELETE
-    //             FROM    guitars
-    //             WHERE   user_id = $[userId]
-    //             AND     id = $[id]`,
-    //             { userId, id: req.params.id  }, ( r ) => r.rowCount );
-    //         return res.json( { id } );
-    //     } catch ( err ) {
-    //         // tslint:disable-next-line:no-console
-    //         console.error(err);
-    //         res.json( { error: err.message || err } );
-    //     }
-    // } );
+
 };

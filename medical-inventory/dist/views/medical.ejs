@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Guitar Inventory</title>
+    <title>Medical Inventory</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -12,33 +12,33 @@
     <div class="container">
         <div id="app">
             <div class="row" id="guitarList">
-                <h3>Guitar list</h3>
+                <h3>Medical Device list</h3>
                 <table v-if="hazGuitars">
                     <thead>
                         <tr>
-                            <th>Year</th>
-                            <th>Brand</th>
-                            <th>Model</th>
-                            <th>Color</th>
+                            <th>BrandId</th>
+                            <th>Name</th>
+                            <th>TypeId</th>
+                            <th>Comment</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="guitar in guitars">
-                            <td>{{ guitar.year }}</td>
-                            <td>{{ guitar.brand }}</td>
-                            <td>{{ guitar.model }}</td>
-                            <td>{{ guitar.color }}</td>
+                            <td>{{ guitar.BrandId }}</td>
+                            <td>{{ guitar.Name }}</td>
+                            <td>{{ guitar.TypeId }}</td>
+                            <td>{{ guitar.Comment }}</td>
                             <td>
                                 <button id="guitarDelete" @click="confirmDeleteGuitar(guitar.id)" class="btn-small"><i class="material-icons right">delete</i>Delete</button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-                <p v-if="noGuitars">No guitars yet!</p>
+                <p v-if="noGuitars">No Medical Devices Availabe!</p>
             </div>
             <div class="row" id="guitarEdit">
-                <h3>Add a guitar</h3>
+                <h3>Add a Device</h3>
                 <form class="col s12" @submit.prevent="addGuitar">
                     <div class="row">
                         <div class="input-field col s6">

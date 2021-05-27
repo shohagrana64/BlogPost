@@ -21,7 +21,7 @@ export const register = ( app: express.Application ) => {
     } );
 
     // define a secure route handler for the guitars page
-    app.get( "/guitars", ( req: any, res ) => {
+    app.get( "/modeltype", ( req: any, res ) => {
         res.render( "medical" );
     } );
     api.register( app );

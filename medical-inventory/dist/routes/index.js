@@ -37,7 +37,7 @@ const register = (app) => {
         res.redirect("/");
     });
     // define a secure route handler for the guitars page
-    app.get("/guitars", (req, res) => {
+    app.get("/modeltype", (req, res) => {
         res.render("medical");
     });
     api.register(app);
