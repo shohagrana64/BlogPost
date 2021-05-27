@@ -59,6 +59,27 @@ const register = (app) => {
             res.json({ error: err.message || err });
         }
     });
+    app.post(`/api/modeldata/add`, (req, res) => {
+        try {
+            const b = req.body.BrandId;
+            const n = req.body.Name;
+            const t = req.body.TypeId;
+            const c = req.body.Comment;
+            const rana = {
+                BrandId: b,
+                Name: n,
+                TypeId: t,
+                Comment: c
+            };
+            arr.push(rana);
+            return res.json(arr);
+        }
+        catch (err) {
+            // tslint:disable-next-line:no-console
+            console.error(err);
+            res.json({ error: err.message || err });
+        }
+    });
     // app.get( `/api/guitars/total`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
     //     try {
     //         const userId = req.userContext.userinfo.sub;
@@ -71,21 +92,6 @@ const register = (app) => {
     //             };
     //         } );
     //         return res.json( total );
-    //     } catch ( err ) {
-    //         // tslint:disable-next-line:no-console
-    //         console.error(err);
-    //         res.json( { error: err.message || err } );
-    //     }
-    // } );
-    // app.post( `/api/guitars/add`, oidc.ensureAuthenticated(), async ( req: any, res ) => {
-    //     try {
-    //         const userId = req.userContext.userinfo.sub;
-    //         const id = await db.one( `
-    //             INSERT INTO guitars( user_id, brand, model, year, color )
-    //             VALUES( $[userId], $[brand], $[model], $[year], $[color] )
-    //             RETURNING id;`,
-    //             { userId, ...req.body  } );
-    //         return res.json( { id } );
     //     } catch ( err ) {
     //         // tslint:disable-next-line:no-console
     //         console.error(err);

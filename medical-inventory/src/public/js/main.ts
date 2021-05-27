@@ -14,33 +14,32 @@ new Vue( {
     },
     data() {
         return {
-            brand: "",
-            color: "",
+            BrandId: "",
+            Name: "",
             guitars: [],
             isLoading: true,
-            model: "",
+            TypeId: "",
             selectedGuitar: "",
             selectedGuitarId: 0,
-            year: ""
+            Comment: ""
         };
     },
     el: "#app",
     methods: {
         addGuitar() {
             const guitar = {
-                brand: this.brand,
-                color: this.color,
-                model: this.model,
-                year: this.year
+                BrandId: this.BrandId,
+                Name: this.Name,
+                TypeId: this.TypeId,
+                Comment: this.Comment
             };
             axios
-                .post( "/api/guitars/add", guitar )
+                .post( "/api/modeldata/add", guitar )
                 .then( () => {
-                    this.$refs.year.focus();
-                    this.brand = "";
-                    this.color = "";
-                    this.model = "";
-                    this.year = "";
+                    this.BrandId = "";
+                    this.Name = "";
+                    this.TypeId = "";
+                    this.Comment = "";
                     this.loadGuitars();
                 } )
                 .catch( ( err: any ) => {
@@ -49,7 +48,7 @@ new Vue( {
                 } );
         },
         confirmDeleteGuitar( id: string ) {
-            const guitar = this.guitars.find( ( g ) => g.id === id );
+            const guitar = this.guitars.find( ( g ) => g.BrandId === id );
             this.selectedGuitar = `${ guitar.Name } ${ guitar.TypeId } ${ guitar.Comment }`;
             this.selectedGuitarId = guitar.BrandId;
             const dc = this.$refs.deleteConfirm;
