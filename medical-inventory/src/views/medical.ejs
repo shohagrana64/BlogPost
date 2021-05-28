@@ -11,9 +11,9 @@
 <body>
     <div class="container">
         <div id="app">
-            <div class="row" id="guitarList">
+            <div class="row" id="medicalList">
                 <h3>Medical Device list</h3>
-                <table v-if="hazGuitars">
+                <table v-if="hazMedicals">
                     <thead>
                         <tr>
                             <th>BrandId</th>
@@ -24,22 +24,22 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="guitar in guitars">
-                            <td>{{ guitar.BrandId }}</td>
-                            <td>{{ guitar.Name }}</td>
-                            <td>{{ guitar.TypeId }}</td>
-                            <td>{{ guitar.Comment }}</td>
+                        <tr v-for="medical in medicals">
+                            <td>{{ medical.BrandId }}</td>
+                            <td>{{ medical.Name }}</td>
+                            <td>{{ medical.TypeId }}</td>
+                            <td>{{ medical.Comment }}</td>
                             <td>
-                                <button id="guitarDelete" @click="confirmDeleteGuitar(guitar.BrandId)" class="btn-small"><i class="material-icons right">delete</i>Delete</button>
+                                <button id="medicalDelete" @click="confirmDeleteMedical(medical.BrandId)" class="btn-small"><i class="material-icons right">delete</i>Delete</button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-                <p v-if="noGuitars">No Medical Devices Availabe!</p>
+                <p v-if="noMedicals">No Medical Devices Availabe!</p>
             </div>
-            <div class="row" id="guitarEdit">
+            <div class="row" id="medicalEdit">
                 <h3>Add a Device</h3>
-                <form class="col s12" @submit.prevent="addGuitar">
+                <form class="col s12" @submit.prevent="addMedical">
                     <div class="row">
                         <div class="input-field col s6">
                             <input v-model="BrandId" ref="BrandId" placeholder="testtt" id="BrandId" type="text" class="validate">
@@ -60,16 +60,16 @@
                             <label for="model">Comment</label>
                         </div>
                     </div>
-                    <button id="guitarEditSubmit" class="btn" type="submit"><i class="material-icons right">send</i>Submit</button>
+                    <button id="medicalEditSubmit" class="btn" type="submit"><i class="material-icons right">send</i>Submit</button>
                 </form>
             </div>
             <div id="deleteConfirm" ref="deleteConfirm" class="modal">
                 <div class="modal-content">
                     <h4>Confirm delete</h4>
-                    <p>Delete {{ selectedGuitar }}?</p>
+                    <p>Delete {{ selectedMedical}}?</p>
                 </div>
                 <div class="modal-footer">
-                    <button @click="deleteGuitar(selectedGuitarId)" class="modal-close btn-flat">Ok</button>
+                    <button @click="deleteMedical(selectedMedicalId)" class="modal-close btn-flat">Ok</button>
                     <button class="modal-close btn-flat">Cancel</button>
                 </div>
             </div>

@@ -66,7 +66,7 @@ export const register = ( app: express.Application ) => {
         }
     } );
 
-    app.post( `/api/modeldata/add`, ( req: any, res ) => {
+    app.post( `/api/devicemodel`, ( req: any, res ) => {
         try {
             const b=req.body.BrandId;
             const n=req.body.Name;

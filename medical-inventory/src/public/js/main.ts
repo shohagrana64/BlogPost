@@ -1,75 +1,75 @@
 import axios from "axios";
 import * as M from "materialize-css";
 import Vue from "vue";
-
 // tslint:disable-next-line no-unused-expression
+
 new Vue( {
     computed: {
-        hazGuitars(): boolean {
-            return this.isLoading === false && this.guitars.length > 0;
+        hazMedicals(): boolean {
+            return this.isLoading === false && this.medicals.length > 0;
         },
-        noGuitars(): boolean {
-            return this.isLoading === false && this.guitars.length === 0;
+        noMedicals(): boolean {
+            return this.isLoading === false && this.medicals.length === 0;
         }
     },
     data() {
         return {
             BrandId: "",
             Name: "",
-            guitars: [],
+            medicals: [],
             isLoading: true,
             TypeId: "",
-            selectedGuitar: "",
-            selectedGuitarId: 0,
+            selectedMedical: "",
+            selectedMedicalId: 0,
             Comment: ""
         };
     },
     el: "#app",
     methods: {
-        addGuitar() {
-            const guitar = {
+        addMedical() {
+            const medical = {
                 BrandId: this.BrandId,
                 Name: this.Name,
                 TypeId: this.TypeId,
                 Comment: this.Comment
             };
             axios
-                .post( "/api/modeldata/add", guitar )
+                .post( "/api/modeldata/add", medical )
                 .then( () => {
                     this.BrandId = "";
                     this.Name = "";
                     this.TypeId = "";
                     this.Comment = "";
-                    this.loadGuitars();
+                    this.loadMedicals();
                 } )
                 .catch( ( err: any ) => {
                     // tslint:disable-next-line:no-console
                     console.log( err );
                 } );
         },
-        confirmDeleteGuitar( id: string ) {
-            const guitar = this.guitars.find( ( g ) => g.BrandId === id );
-            this.selectedGuitar = `${ guitar.Name } ${ guitar.TypeId } ${ guitar.Comment }`;
-            this.selectedGuitarId = guitar.BrandId;
+        confirmDeleteMedical( id: string ) {
+            const medical = this.medicals.find( ( g ) => g.BrandId === id );
+            this.selectedMedical = `${ medical.Name } ${ medical.TypeId } ${ medical.Comment }`;
+            this.selectedMedicalId = medical.BrandId;
             const dc = this.$refs.deleteConfirm;
             const modal = M.Modal.init( dc );
             modal.open();
         },
-        deleteGuitar( id: string ) {
+        deleteMedical( id: string ) {
             axios
                 .delete( `/api/modeldata/remove/${ id }` )
-                .then( this.loadGuitars )
+                .then( this.loadMedicals )
                 .catch( ( err: any ) => {
                     // tslint:disable-next-line:no-console
                     console.log( err );
                 } );
         },
-        loadGuitars() {
+        loadMedicals() {
             axios
                 .get( "/api/modeltype" )
                 .then( ( res: any ) => {
                     this.isLoading = false;
-                    this.guitars = res.data;
+                    this.medicals = res.data;
                 } )
                 .catch( ( err: any ) => {
                     // tslint:disable-next-line:no-console
@@ -78,6 +78,6 @@ new Vue( {
         }
     },
     mounted() {
-        return this.loadGuitars();
+        return this.loadMedicals();
     }
 } );
