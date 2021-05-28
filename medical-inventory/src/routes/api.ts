@@ -24,6 +24,11 @@ export const register = ( app: express.Application ) => {
 
     app.get( `/api/modeltype`, ( req: any, res ) => {
         try {
+            // const arr2 = [];
+            // for (const val of arr) {
+            //     arr2.push(val.BrandId);
+            // }
+            // return res.json(arr2);
             return res.json( arr );
         } catch ( err ) {
             // tslint:disable-next-line:no-console
@@ -78,7 +83,12 @@ export const register = ( app: express.Application ) => {
                 TypeId: t,
                 Comment: c
             }
+            if(b==="" || n==="" || t===""){
+                return res.json(arr);
+            }
+            else{
             arr.push(rana);
+            }
             return res.json( arr );
         } catch ( err ) {
             // tslint:disable-next-line:no-console

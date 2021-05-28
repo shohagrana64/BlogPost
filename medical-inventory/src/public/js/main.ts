@@ -34,7 +34,7 @@ new Vue( {
                 Comment: this.Comment
             };
             axios
-                .post( "/api/modeldata/add", medical )
+                .post( "/api/devicemodel", medical )
                 .then( () => {
                     this.BrandId = "";
                     this.Name = "";
@@ -52,6 +52,14 @@ new Vue( {
             this.selectedMedical = `${ medical.Name } ${ medical.TypeId } ${ medical.Comment }`;
             this.selectedMedicalId = medical.BrandId;
             const dc = this.$refs.deleteConfirm;
+            const modal = M.Modal.init( dc );
+            modal.open();
+        },
+        confirmDescribe( name: string ) {
+            const medical = this.medicals.find( ( g ) => g.Name === name );
+            this.selectedMedical = `BrandID: ${ medical.BrandId } \nName: ${ medical.Name } \nTypeID: ${ medical.TypeId } \nComment: ${ medical.Comment }`;
+            this.selectedMedicalId = medical.BrandId;
+            const dc = this.$refs.describeConfirm;
             const modal = M.Modal.init( dc );
             modal.open();
         },
