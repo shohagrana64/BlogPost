@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Medical Inventory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+<body>
+    <div class="container">
+        <div id="app">
+            <div class="row" id="medicalList">
+                <h3>Medical Device list</h3>
+                <table v-if="hazMedicals">
+                    <thead>
+                        <tr>
+                            <th>BrandId</th>
+                            <th>Name</th>
+                            <th>TypeId</th>
+                            <th>Comment</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="medical in medicals">
+                            <td>{{ medical.BrandId }}</td>
+                            <td>{{ medical.Name }}</td>
+                            <td>{{ medical.TypeId }}</td>
+                            <td>{{ medical.Comment }}</td>
+                            <td>
+                                <button id="medicalDelete" @click="confirmDeleteMedical(medical.BrandId)" class="btn-small"><i class="material-icons right">delete</i>Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p v-if="noMedicals">No Medical Devices Availabe!</p>
+            </div>
+            <div class="row" id="medicalEdit">
+                <h3>Add a Device</h3>
+                <form class="col s12" @submit.prevent="addMedical">
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <input v-model="BrandId" ref="BrandId" placeholder="testtt" id="BrandId" type="text" class="validate">
+                            <label for="brand">BrandID</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <input v-model="Name" ref="Name" placeholder="testyName" id="Name" type="text" class="validate">
+                            <label for="brand">Name</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <input v-model="TypeId" ref="TypeId" placeholder="7" id="TypeId" type="text" class="validate">
+                            <label for="model">TypeId</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <input v-model="Comment" ref="Comment" placeholder="Not Good" id="Comment" type="text" class="validate">
+                            <label for="model">Comment</label>
+                        </div>
+                    </div>
+                    <button id="medicalEditSubmit" class="btn" type="submit"><i class="material-icons right">send</i>Submit</button>
+                </form>
+            </div>
+            <div id="deleteConfirm" ref="deleteConfirm" class="modal">
+                <div class="modal-content">
+                    <h4>Confirm delete</h4>
+                    <p>Delete {{ selectedMedical}}?</p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="deleteMedical(selectedMedicalId)" class="modal-close btn-flat">Ok</button>
+                    <button class="modal-close btn-flat">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/main.js"></script></body>
+</html>
