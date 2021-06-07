@@ -24,13 +24,14 @@ The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, Po
 In this tutorial we will deploy Memcached database. We will cover the following steps:
 
 1) Install KubeDB
-2) Deploy Database
+2) Deploy Memcached Cluster
+3) See the Automatic Failover feature
 
-## Step 1: Installing KubeDB
+## Install KubeDB
 
 We will follow the following sub-steps to install KubeDB.
 
-### Step 1.1: Get Cluster ID
+### Step 1: Get Cluster ID
 
 We need the cluster ID to get the KubeDB License.
 To get cluster ID we can run the following command:
@@ -40,13 +41,13 @@ $ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
 08b1259c-5d51-4948-a2de-e2af8e6835a4 
 ```
 
-### Step 1.2: Get License
+### Step 2: Get License
 
 Go to [Appscode License Server](https://license-issuer.appscode.com/) to get the license.txt file. For this tutorial we will use KubeDB Enterprise Edition.
 
 ![License Server](licenseserver.png)
 
-### Step 1.3 Install KubeDB
+### Step 3 Install KubeDB
 
 We will use helm to install KubeDB.Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
 Now, let's install `KubeDB`.
@@ -76,7 +77,7 @@ $ helm install kubedb appscode/kubedb \
 Let's verify the installation:
 
 ```bash
-$ watch oc get pods --all-namespaces -l "app.kubernetes
+$ watch oc get pods --all-namespaces -l "app.kubernetes.io/instance=kubedb"
 Every 2.0s: oc get pods --all-namespaces -l app.kubernetes.io/instance=kubedb                                                                                                      Shohag: Wed Apr 21 10:08:54 2021
 
 NAMESPACE     NAME                                        READY   STATUS    RESTARTS   AGE
@@ -121,18 +122,18 @@ redisopsrequests.ops.kubedb.com                   2021-04-21T04:05:54Z
 redisversions.catalog.kubedb.com                  2021-04-21T04:02:49Z
 ```
 
-## Step 2: Deploying Database
+## Deploy Memcached Cluster
 
 Now we are going to Install Memcached with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
-
+ 
 ```bash
 $ oc create ns demo
 ```
 
 Now, before deploying the Memcached CRD let's perform some checks to ensure that it is deployed correctly.
 
-### Check 1: StorageClass check
+### Check 1: StorageClass Check
 
 Let's check the availabe storage classes:
 
@@ -142,7 +143,7 @@ NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLO
 local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false    
 ```
 
-Here, you can see that I have a storageclass named `local-path`. If you dont have a storage class you can run the following command:
+Here, we can see that I have a storageclass named `local-path`. If you do not have a storage class you can run the following command:
 
 ```bash
 $ oc apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
@@ -152,44 +153,46 @@ This will create the storage-class named local-path.
 
 ### Check 2: Correct Permissions
 
-We need to ensure that the service account has correct permissions. To ensure correct permissions we should run:
+We can ensure that the service account has correct permissions by running the following command:
 
 ```bash
 $ oc adm policy add-scc-to-user privileged system:serviceaccount:local-path-storage:local-path-provisioner-service-account
 ```
 
-This command will give the required permissions. </br>
-Here is the yaml of the Memcached CRD we are going to use:
+OpenShift has Security Context Constraints for which the MariaDB CRD is restricted to be deployed. The above command will give the required permissions. </br>
+
+### Deploy Memcached CRD
+
+Now, let's have a look into the yaml of the Memcached CRD we are going to use:
 
 ```yaml
 apiVersion: kubedb.com/v1alpha2
-kind: Redis
+kind: Memcached
 metadata:
-  name: redis-quickstart
+  name: memcd-quickstart
   namespace: demo
 spec:
-  version: 6.0.6
-  storageType: Durable
-  storage:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 1Gi
+  replicas: 3
+  version: "1.5.4-v1"
+  podTemplate:
+    spec:
+      resources:
+        limits:
+          cpu: 500m
+          memory: 128Mi
+        requests:
+          cpu: 250m
+          memory: 64Mi
   terminationPolicy: WipeOut
 ```
 
 Let's save this yaml configuration into memcached.yaml. Then apply using the command
 `oc apply -f memcached.yaml`
 
-This yaml uses Memcached CRD.
-
 * In this yaml we can see in the `spec.version` field the version of Memcached. You can change and get updated version by running `oc get memcachedversions` command.
 * Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
 * `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
 * Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/memcached/concepts/memcached/#specterminationpolicy).
-
-### Deploy Memcached CRD
 
 Once these are handled correctly and the Memcached CRD is deployed you will see that the following are created:
 
@@ -214,7 +217,7 @@ redis.kubedb.com/redis-quickstart   6.0.6     Ready    4m48s
 
 > We have successfully deployed Redis in OpenShift. Now we can exec into the container to use the database.
 
-## Accessing Database Through CLI
+### Accessing Database Through CLI
 
 To access the database through CLI we have to exec into the container:
 
@@ -234,7 +237,7 @@ OK
 Now we have entered into the Redis CLI and we can create and delete as we want.
 redis stores data as key value pair. In the above commands, we set mykey to "Hello".
 
-> This was just one example of database deployment. The other databases that KubeDB suport are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+> This was just one example of database deployment. The other databases that KubeDB support are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
 
 ## Support
 
