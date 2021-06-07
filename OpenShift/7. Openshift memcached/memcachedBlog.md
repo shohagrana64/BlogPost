@@ -199,45 +199,114 @@ Once these are handled correctly and the Memcached CRD is deployed you will see 
 ```bash
 $ oc get all -n demo
 NAME                     READY   STATUS    RESTARTS   AGE
-pod/redis-quickstart-0   1/1     Running   0          4m36s
+pod/memcd-quickstart-0   1/1     Running   0          70s
+pod/memcd-quickstart-1   1/1     Running   0          66s
+pod/memcd-quickstart-2   1/1     Running   0          63s
 
-NAME                            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/redis-quickstart        ClusterIP   10.217.4.254   <none>        6379/TCP   4m37s
-service/redis-quickstart-pods   ClusterIP   None           <none>        6379/TCP   4m37s
+NAME                            TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
+service/memcd-quickstart        ClusterIP   10.217.4.2   <none>        11211/TCP   71s
+service/memcd-quickstart-pods   ClusterIP   None         <none>        11211/TCP   71s
 
 NAME                                READY   AGE
-statefulset.apps/redis-quickstart   1/1     4m39s
+statefulset.apps/memcd-quickstart   3/3     73s
 
-NAME                                                  TYPE               VERSION   AGE
-appbinding.appcatalog.appscode.com/redis-quickstart   kubedb.com/redis   6.0.6     4m5s
+NAME                                                  TYPE                   VERSION   AGE
+appbinding.appcatalog.appscode.com/memcd-quickstart   kubedb.com/memcached   1.5.4     66s
 
-NAME                                VERSION   STATUS   AGE
-redis.kubedb.com/redis-quickstart   6.0.6     Ready    4m48s
+NAME                                    VERSION    STATUS   AGE
+memcached.kubedb.com/memcd-quickstart   1.5.4-v1   Ready    82s
 ```
 
-> We have successfully deployed Redis in OpenShift. Now we can exec into the container to use the database.
+> We have successfully deployed Memcached in OpenShift. Now we can exec into the container to use the database.
 
 ### Accessing Database Through CLI
 
-To access the database through CLI we have to exec into the container:
+Now, you can connect to this Memcached cluster using telnet. Here, we will connect to Memcached server from local-machine through port-forwarding.
 
  ```bash
-~ $ oc exec -it redis-quickstart-0 -n demo sh
-kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
-/data $ redis-cli
-127.0.0.1:6379> ping
-PONG
-127.0.0.1:6379> SET mykey "Hello"
-OK
-127.0.0.1:6379> get mykey
-"Hello"
-127.0.0.1:6379> exit
+$ oc  port-forward -n demo memcd-quickstart-0 11211
+Forwarding from 127.0.0.1:11211 -> 11211
+Forwarding from [::1]:11211 -> 11211
+Handling connection for 11211
  ```
 
-Now we have entered into the Redis CLI and we can create and delete as we want.
-redis stores data as key value pair. In the above commands, we set mykey to "Hello".
+Now in a new terminal lets connect to the pod with telnet:
+
+```bash
+$ telnet 127.0.0.1 11211
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+set my_key 0 2592000 1
+2
+STORED
+
+# Meaning:
+# 0       => no flags
+# 2592000 => TTL (Time-To-Live) in [s]
+# 1       => size in byte
+# 2       => value
+
+# Now let's view the stored data
+get my_key
+VALUE my_key 0 1
+2
+END
+
+quit
+Connection closed by foreign host.
+```
 
 > This was just one example of database deployment. The other databases that KubeDB support are MySQL, Postgres, Elasticsearch, MongoDB and MariaDB. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+
+## Memcached Clustering Features
+
+There are 2 main features of Clustering which are `Data Availability` and `Automatic Failover`. These are shown in the following sections.
+
+### Data Availability
+
+In this section, we will see whether we can get the data from any other node (any master or replica) or not.
+We can notice the replication of data among the other pods of Redis:
+
+```bash
+# switch the connection to the replica of the current master and get the data
+/data $ redis-cli -c -h 10.217.0.28
+10.217.0.28:6379> get hello
+-> Redirected to slot [866] located at 10.217.0.9:6379
+"world"
+10.217.0.9:6379> exit
+# switch the connection to any other node
+# get the data
+/data $ redis-cli -c -h 10.217.0.43
+10.217.0.43:6379> get hello
+-> Redirected to slot [866] located at 10.217.0.9:6379
+"world"
+```
+
+### Automatic Failover
+
+To test automatic failover, we will force a master node to restart. Since the master node (`pod`) becomes unavailable, the rest of the members will elect a replica (one of its replica in case of more than one replica under this master) of this master node as the new master. When the old master comes back, it will join the cluster as the new replica of the new master.
+
+```bash
+# connect to any node and get the master nodes info
+$ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
+/data $ redis-cli -c cluster nodes | grep master
+dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.9:6379@16379 myself,master - 0 1621916192000 23 connected 0-5460
+e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621916193064 21 connected 5461-10922
+c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621916193566 25 connected 10923-16383
+# let's crash node 10.217.0.9 with the `DEBUG SEGFAULT` command
+/data $ redis-cli -h 10.217.0.9 debug segfault
+Error: Server closed the connection
+command terminated with exit code 137
+# now again connect to a node and get the master nodes info
+$ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
+/data $ redis-cli -c cluster nodes | grep master
+e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621931346000 21 connected 5461-10922
+dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.28:6379@16379 master - 0 1621931347000 27 connected 0-5460
+c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621931347000 25 connected 10923-16383
+```
+
+Notice that 10.217.0.28 is the new master and 10.217.0.9 is the replica of 10.217.0.28. This means that the replica has now become the master node since the previous master node crashed. Here, we notice that there has been a successful recovery from failover.
 
 ## Support
 
