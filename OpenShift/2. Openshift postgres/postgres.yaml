@@ -13,9 +13,9 @@ spec:
     resources:
       requests:
         storage: 1Gi
-  podTemplate: 
+  podTemplate:
     spec:
-      containerSecurityContext: 
+      containerSecurityContext:
         runAsUser: 1000610000
         # runAsGroup: 1000610000
   terminationPolicy: WipeOut

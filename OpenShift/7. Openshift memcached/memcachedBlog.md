@@ -25,7 +25,6 @@ In this tutorial we will deploy Memcached database. We will cover the following 
 
 1) Install KubeDB
 2) Deploy Memcached Cluster
-3) See the Automatic Failover feature
 
 ## Install KubeDB
 
@@ -126,7 +125,7 @@ redisversions.catalog.kubedb.com                  2021-04-21T04:02:49Z
 
 Now we are going to Install Memcached with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
- 
+
 ```bash
 $ oc create ns demo
 ```
@@ -282,31 +281,6 @@ We can notice the replication of data among the other pods of Redis:
 -> Redirected to slot [866] located at 10.217.0.9:6379
 "world"
 ```
-
-### Automatic Failover
-
-To test automatic failover, we will force a master node to restart. Since the master node (`pod`) becomes unavailable, the rest of the members will elect a replica (one of its replica in case of more than one replica under this master) of this master node as the new master. When the old master comes back, it will join the cluster as the new replica of the new master.
-
-```bash
-# connect to any node and get the master nodes info
-$ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
-/data $ redis-cli -c cluster nodes | grep master
-dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.9:6379@16379 myself,master - 0 1621916192000 23 connected 0-5460
-e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621916193064 21 connected 5461-10922
-c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621916193566 25 connected 10923-16383
-# let's crash node 10.217.0.9 with the `DEBUG SEGFAULT` command
-/data $ redis-cli -h 10.217.0.9 debug segfault
-Error: Server closed the connection
-command terminated with exit code 137
-# now again connect to a node and get the master nodes info
-$ oc exec -it redis-cluster-shard0-0 -n demo -c redis -- sh
-/data $ redis-cli -c cluster nodes | grep master
-e3f2085ee716bacf17a298081bfa29a1454a8a87 10.217.0.33:6379@16379 master - 0 1621931346000 21 connected 5461-10922
-dcead4ade01632fe376466274345b0d9e846cfcf 10.217.0.28:6379@16379 master - 0 1621931347000 27 connected 0-5460
-c9f383c2176a9da2fbda64bab379d0680a10d972 10.217.0.29:6379@16379 master - 0 1621931347000 25 connected 10923-16383
-```
-
-Notice that 10.217.0.28 is the new master and 10.217.0.9 is the replica of 10.217.0.28. This means that the replica has now become the master node since the previous master node crashed. Here, we notice that there has been a successful recovery from failover.
 
 ## Support
 
