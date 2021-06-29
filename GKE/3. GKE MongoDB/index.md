@@ -1,6 +1,6 @@
 ---
 title: Manage MongoDB in GKE Using KubeDB
-date: 2021-06-14
+date: 2021-06-29
 weight: 22
 authors:
   - Shohag Rana
@@ -167,20 +167,20 @@ Once these are handled correctly and the MongoDB object is deployed you will see
 ```bash
 $ kubectl get all -n demo
 NAME                   READY   STATUS    RESTARTS   AGE
-pod/mgo-quickstart-0   1/1     Running   0          5m49s
+pod/mgo-quickstart-0   1/1     Running   0          96s
 
 NAME                          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)     AGE
-service/mgo-quickstart        ClusterIP   10.217.4.198   <none>        27017/TCP   5m50s
-service/mgo-quickstart-pods   ClusterIP   None           <none>        27017/TCP   5m50s
+service/mgo-quickstart        ClusterIP   10.112.0.106   <none>        27017/TCP   98s
+service/mgo-quickstart-pods   ClusterIP   None           <none>        27017/TCP   98s
 
 NAME                              READY   AGE
-statefulset.apps/mgo-quickstart   1/1     5m52s
+statefulset.apps/mgo-quickstart   1/1     99s
 
 NAME                                                TYPE                 VERSION   AGE
-appbinding.appcatalog.appscode.com/mgo-quickstart   kubedb.com/mongodb   4.2.3     5m23s
+appbinding.appcatalog.appscode.com/mgo-quickstart   kubedb.com/mongodb   4.2.3     59s
 
 NAME                                VERSION   STATUS   AGE
-mongodb.kubedb.com/mgo-quickstart   4.2.3     Ready    6m
+mongodb.kubedb.com/mgo-quickstart   4.2.3     Ready    103s
 ```
 
 > We have successfully deployed MongoDB in GKE. Now we can exec into the container to use the database.
@@ -194,9 +194,10 @@ To access the database through CLI we have to exec into the container:
 $ kubectl  get secrets -n demo mgo-quickstart-auth -o jsonpath='{.data.\username}' | base64 -d
 root
 $ kubectl  get secrets -n demo mgo-quickstart-auth -o jsonpath='{.data.\password}' | base64 -d
-p&_Wc0aDLkfkL0UV
+v!Mc3W05a*(h0)Dp
 $ kubectl exec -it mgo-quickstart-0 -n demo sh
 kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
+# 
  ```
 
  Then to login into MongoDB:
@@ -205,7 +206,7 @@ kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future versi
 # mongo admin
 MongoDB shell version v4.2.3
 connecting to: mongodb://127.0.0.1:27017/admin?compressors=disabled&gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("ddb8efb4-2af1-4c1a-ad98-3a58b0696c59") }
+Implicit session: session { "id" : UUID("843fa0a7-d675-4181-9c95-64e234ea6258") }
 MongoDB server version: 4.2.3
 Welcome to the MongoDB shell.
 For interactive help, type "help".
@@ -213,7 +214,7 @@ For more comprehensive documentation, see
 	http://docs.mongodb.org/
 Questions? Try the support group
 	http://groups.google.com/group/mongodb-user
-> db.auth("root","p&_Wc0aDLkfkL0UV")
+> db.auth("root","v!Mc3W05a*(h0)Dp")
 1
  ```
 
@@ -230,7 +231,7 @@ switched to db testdb
 > db.movie.insert({"name":"batman"});
 WriteResult({ "nInserted" : 1 })
 > db.movie.find().pretty()
-{ "_id" : ObjectId("6093810e104a7bd2911ec415"), "name" : "batman" }
+{ "_id" : ObjectId("60daad277430604624c4159e"), "name" : "batman" }
 > exit
 bye
 ```
@@ -256,9 +257,12 @@ $ helm install stash appscode/stash             \
 Let's verify the installation:
 
 ```bash
-$ kubectl get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+~ $ kubectl get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
 NAMESPACE     NAME                                      READY   STATUS    RESTARTS   AGE
-kube-system   stash-stash-enterprise-77bd9869c6-9wjvv   2/2     Running   0          7d19h
+kube-system   stash-stash-enterprise-6979884d85-7hdfm   0/2     Pending   0          0s
+kube-system   stash-stash-enterprise-6979884d85-7hdfm   0/2     Pending   0          0s
+kube-system   stash-stash-enterprise-6979884d85-7hdfm   0/2     ContainerCreating   0          0s
+kube-system   stash-stash-enterprise-6979884d85-7hdfm   2/2     Running             0          11s
 ```
 
 ### Step 2: Prepare Backend
@@ -331,9 +335,14 @@ spec:
 So, after 5 minutes we can see the following status:
 
 ```bash
-$ kubectl get backupsession -n demo                                 
+$ kubectl get backupsession -n demo
 NAME                               INVOKER-TYPE          INVOKER-NAME            PHASE       AGE
-sample-mongodb-backup-1620282013   BackupConfiguration   sample-mongodb-backup   Succeeded   2m40s
+sample-mongodb-backup-1624944608   BackupConfiguration   sample-mongodb-backup   Succeeded   55s
+
+$ kubectl get repository -n demo
+NAME       INTEGRITY   SIZE        SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
+gcs-repo   true        1.997 KiB   1                3m15s                    7m34s
+
 ```
 
 Now if we check our GCS bucket we can see that the backup has been successful.
@@ -356,19 +365,12 @@ At first let's simulate accidental database deletion.
 ```bash
 $ kubectl exec -it mgo-quickstart-0 -n demo sh
 kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
-$ mongo admin
+# mongo admin
 MongoDB shell version v4.2.3
 connecting to: mongodb://127.0.0.1:27017/admin?compressors=disabled&gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("6185c112-ccfd-44f6-828d-cdca7435372e") }
+Implicit session: session { "id" : UUID("2bdfd985-3adb-4ea9-aab5-8b9e7de935ee") }
 MongoDB server version: 4.2.3
-Welcome to the MongoDB shell.
-For interactive help, type "help".
-For more comprehensive documentation, see
-	http://docs.mongodb.org/
-Questions? Try the support group
-	http://groups.google.com/group/mongodb-user
-2021-05-06T06:28:38.418+0000 I  STORAGE  [main] In File::open(), ::open for '//.mongorc.js' failed with Permission denied
-> db.auth("root","ay=bql8jD5Y;SKrF")
+> db.auth("root","v!Mc3W05a*(h0)Dp")
 1
 > show dbs
 admin   0.000GB
@@ -407,14 +409,13 @@ spec:
     - snapshots: [latest]
 ```
 
-Notice that the `securityContext` field is the same as we mentioned earlier in the BackupConfiguration. This RestoreSession specifies where the data will be restored.
+This RestoreSession specifies where the data will be restored.
 Once this is applied, a RestoreSession will be created. Once it has succeeded, the database has been successfully recovered as you can see below:
 
 ```bash
 $ kubectl get restoresession -n demo
 NAME                     REPOSITORY   PHASE       AGE
-sample-mongodb-restore   gcs-repo     Succeeded   95s
-
+sample-mongodb-restore   gcs-repo     Succeeded   10s
 ```
 
 Now let's check whether the database has been correctly restored:
@@ -426,7 +427,7 @@ config  0.000GB
 local   0.000GB
 testdb  0.000GB
 > db.movie.find().pretty()
-{ "_id" : ObjectId("60938f7a2bfe705fb488fb17"), "name" : "batman" }
+{ "_id" : ObjectId("60daad277430604624c4159e"), "name" : "batman" }
 ```
 
 > The recovery has been successful. If you faced any difficulties in the recovery process, you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20GKE).

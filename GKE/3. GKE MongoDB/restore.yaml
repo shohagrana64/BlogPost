@@ -1,10 +1,9 @@
 apiVersion: stash.appscode.com/v1beta1
-kind: BackupConfiguration
+kind: RestoreSession
 metadata:
-  name: sample-mongodb-backup
+  name: sample-mongodb-restore
   namespace: demo
 spec:
-  schedule: "*/5 * * * *"
   repository:
     name: gcs-repo
   target:
@@ -12,7 +11,5 @@ spec:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
       name: mgo-quickstart
-  retentionPolicy:
-    name: keep-last-5
-    keepLast: 5
-    prune: true
+  rules:
+    - snapshots: [latest]
