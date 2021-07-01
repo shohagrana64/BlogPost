@@ -1,7 +1,7 @@
 ---
-title: Manage MySQL in Openshift Using KubeDB
-date: 2021-06-28
-weight: 23
+title: How to Manage MySQL in GKE Using KubeDB
+date: 2021-04-23
+weight: 20
 authors:
   - Shohag Rana
 tags:
@@ -21,6 +21,13 @@ tags:
 ## Overview
 
 The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL, Memcached and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
+At first, let's confirm we are in the GKE Cluster:
+
+```bash
+$ kubectl config current-context
+gke_appscode-testing_us-central1-c_kubedb-test
+```
+
 In this tutorial we will deploy MySQL database. We will cover the following steps:
 
 1) Install KubeDB
@@ -31,7 +38,7 @@ In this tutorial we will deploy MySQL database. We will cover the following step
 
 ## Install KubeDB
 
-We will follow the following sub-steps to install KubeDB.
+We will follow the following steps to install KubeDB.
 
 ### Step 1: Get Cluster ID
 
@@ -39,8 +46,8 @@ We need the cluster ID to get the KubeDB License.
 To get cluster ID we can run the following command:
 
 ```bash
-$ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
-08b1259c-5d51-4948-a2de-e2af8e6835a4 
+$ kubectl get ns kube-system -o=jsonpath='{.metadata.uid}'
+315a6802-18d5-40b6-84b5-da9e1fb28dd7
 ```
 
 ### Step 2: Get License
@@ -51,7 +58,7 @@ Go to [Appscode License Server](https://license-issuer.appscode.com/) to get the
 
 ### Step 3: Install KubeDB
 
-We will use helm to install KubeDB. Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
+We will use helm to install KubeDB.Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
 Now, let's install `KubeDB`.
 
 ```bash
@@ -91,7 +98,7 @@ kube-system   kubedb-kubedb-enterprise-b658c95fc-kwqt6    1/1     Running   0   
 We can see the CRD Groups that have been registered by the operator by running the following command:
 
 ```bash
-$ oc get crd -l app.kubernetes.io/name=kubedb
+$ kubectl get crd -l app.kubernetes.io/name=kubedb
 NAME                                              CREATED AT
 elasticsearchautoscalers.autoscaling.kubedb.com   2021-04-21T04:05:40Z
 elasticsearches.kubedb.com                        2021-04-21T04:05:37Z
@@ -129,38 +136,10 @@ Now we are going to Install MySQL with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
 
 ```bash
-$ oc create ns demo
+$ kubectl create ns demo
+namespace/demo created
 ```
 
-Now, before deploying the MySQL CRD let's perform some checks to ensure that it will be deployed correctly.
-
-### Check 1: StorageClass Check
-
-Let's check the availabe storage classes:
-
-```bash
-$ oc get storageclass
-NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION
-local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false    
-```
-
-Here, we can see that I have a storageclass named `local-path`. If you do not have a storage class you can run the following command:
-
-```bash
-$ oc apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
-```
-
-This will create the storage-class named local-path.
-
-### Check 2: Correct Permissions
-
-We can ensure that the service account has correct permissions by running the following command:
-
-```bash
-$ oc adm policy add-scc-to-user privileged system:serviceaccount:local-path-storage:local-path-provisioner-service-account
-```
-
-OpenShift has Security Context Constraints for which the MySQL CRD is restricted to be deployed. The above command will give the required permissions. </br>
 Here is the yaml of the MySQL CRD we are going to use:
 
 ```yaml
@@ -182,10 +161,12 @@ spec:
 ```
 
 Let's save this yaml configuration into mysql.yaml. Then apply using the command
-`oc apply -f mysql.yaml`
+`kubectl apply -f mysql.yaml`
 
-* In this yaml we can see in the `spec.version` field the version of MySQL. You can change and get updated version by running `oc get mysqlversions` command.
-* Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
+This yaml uses MySQL CRD.
+
+* In this yaml we can see in the `spec.version` field the version of MySQL. You can change and get updated version by running `kubectl get mysqlversions` command. 
+* Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not. 
 * `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
 * Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/mysql/concepts/database/#specterminationpolicy).
 
@@ -194,42 +175,41 @@ Let's save this yaml configuration into mysql.yaml. Then apply using the command
 Once these are handled correctly and the MySQL CRD is deployed you will see that the following are created:
 
 ```bash
-$ oc get all -n demo
+~ $ kubectl get all -n demo
 NAME                     READY   STATUS    RESTARTS   AGE
-pod/mysql-quickstart-0   1/1     Running   0          2m3s
+pod/mysql-quickstart-0   1/1     Running   0          52s
 
-NAME                            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/mysql-quickstart        ClusterIP   10.217.5.152   <none>        3306/TCP   2m4s
-service/mysql-quickstart-pods   ClusterIP   None           <none>        3306/TCP   2m4s
+NAME                            TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+service/mysql-quickstart        ClusterIP   10.52.14.69   <none>        3306/TCP   56s
+service/mysql-quickstart-pods   ClusterIP   None          <none>        3306/TCP   56s
 
 NAME                                READY   AGE
-statefulset.apps/mysql-quickstart   1/1     2m6s
+statefulset.apps/mysql-quickstart   0/1     56s
 
 NAME                                                  TYPE               VERSION   AGE
-appbinding.appcatalog.appscode.com/mysql-quickstart   kubedb.com/mysql   8.0.23    2m10s
+appbinding.appcatalog.appscode.com/mysql-quickstart   kubedb.com/mysql   8.0.23    56s
 
-NAME                                VERSION     STATUS   AGE
-mysql.kubedb.com/mysql-quickstart   8.0.23-v1   Ready    2m13s
-
+NAME                                VERSION     STATUS         AGE
+mysql.kubedb.com/mysql-quickstart   8.0.23-v1   Provisioning   59s
 ```
 
-> We have successfully deployed MySQL database in OpenShift. Now we can exec into the container to use the database.
+> We have successfully deployed MySQL database in GKE. Now we can exec into the container to use the database.
 
 ### Accessing Database Through CLI
 
 To access the database through CLI we have to exec into the container:
 
  ```bash
-$ oc exec -it -n demo mysql-quickstart-0 -- bash
-root@mysql-quickstart-0:/# 
+$ kubectl exec -it -n demo mysql-quickstart-0 -- bash
  ```
 
  Then to login into mysql:
 
  ```bash
 root@mysql-quickstart-0:/# mysql -uroot -p${MYSQL_ROOT_PASSWORD}
+mysql: [Warning] Using a password on the command line interface can be insecure.
 Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 25
+Your MySQL connection id is 14
 Server version: 8.0.23 MySQL Community Server - GPL
 
 Copyright (c) 2000, 2021, Oracle and/or its affiliates.
@@ -302,7 +282,10 @@ $ helm install stash appscode/stash             \
 Let's verify the installation:
 
 ```bash
-$ oc get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+$ kubectl get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+NAMESPACE     NAME                                      READY   STATUS    RESTARTS   AGE
+kube-system   stash-stash-enterprise-7b4b9fd859-l5jfm   2/2     Running   0          51s
+
 ```
 
 ### Step 2: Prepare Backend
@@ -319,7 +302,7 @@ At first we need to create a secret so that we can access the gcs bucket. We can
 $ echo -n 'YOURPASSWORD' > RESTIC_PASSWORD
 $ echo -n 'YOURPROJECTNAME' > GOOGLE_PROJECT_ID
 $ cat /PATH/TO/JSONKEY.json > GOOGLE_SERVICE_ACCOUNT_JSON_KEY
-$ oc create secret generic -n demo gcs-secret \
+$ kubectl create secret generic -n demo gcs-secret \
         --from-file=./RESTIC_PASSWORD \
         --from-file=./GOOGLE_PROJECT_ID \
         --from-file=./GOOGLE_SERVICE_ACCOUNT_JSON_KEY
@@ -341,7 +324,7 @@ spec:
     storageSecretName: gcs-secret
 ```
 
-This repository CRD specifies the gcs-secret we created before and stores the name and path to the gcs-bucket. It also specifies the location in the bucket where we want to backup our database.
+This repository CRD specifies the gcs-secret we created before in the `storageSecretName`. It also specifies the location in the bucket where we want to backup our database in `spec.backend.gcs.bucket`.
 > My bucket name is stash-shohag. Don't forget to change `spec.backend.gcs.bucket` to your bucket name.
 
 ### Step 4: Create BackupConfiguration
@@ -363,11 +346,6 @@ spec:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
       name: mysql-quickstart
-  runtimeSettings:
-    container:
-      securityContext:
-        runAsUser: 1000610000
-        runAsGroup: 1000610000
   retentionPolicy:
     name: keep-last-5
     keepLast: 5
@@ -381,26 +359,23 @@ spec:
 
 So, after 5 minutes we can see the following status:
 
-
 ```bash
-$ oc get backupsession -n demo
-NAME                             INVOKER-TYPE          INVOKER-NAME          PHASE       AGE
-sample-mysql-backup-1624861209   BackupConfiguration   sample-mysql-backup   Succeeded   103s
-
-$ oc get repository -n demo
-NAME       INTEGRITY   SIZE        SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
-gcs-repo   true        3.670 MiB   1                2m18s                    15m
-
-$ oc get backupconfiguration -n demo
+$ kubectl get backupconfiguration -n demo
 NAME                  TASK   SCHEDULE      PAUSED   AGE
-sample-mysql-backup          */5 * * * *            16m
+sample-mysql-backup          */5 * * * *            12s
+
+$ kubectl get backupsession -n demo
+NAME                             INVOKER-TYPE          INVOKER-NAME          PHASE       AGE
+sample-mysql-backup-1623237911   BackupConfiguration   sample-mysql-backup   Succeeded   2m44s
+
+$ kubectl get repository -n demo
+NAME       INTEGRITY   SIZE         SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
+gcs-repo   true        3.670 MiB   1                2m27s                    39m
 
 ```
 
 Now if we check our GCS bucket we can see that the backup has been successful.
-
-![gcsSuccess](gcsSuccess.png)
-
+![gcs Success](gcsSuccess.png)
 > **If you reached here CONGRATULATIONS!! :confetti_ball:  :partying_face: :confetti_ball: The backup has been successful**. If you didn't its okay. You can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20OpenShift).
 
 ## Recover
@@ -409,17 +384,17 @@ Let's think of a scenario in which the database has been accidentally deleted or
 In such a case, we have to pause the BackupConfiguration so that the failed/damaged database does not get backed up into the cloud:
 
 ```bash
-oc patch backupconfiguration -n demo sample-mysql-backup --type="merge" --patch='{"spec": {"paused": true}}'
+kubectl patch backupconfiguration -n demo sample-mysql-backup --type="merge" --patch='{"spec": {"paused": true}}'
 ```
 
 At first let's simulate accidental database deletion.
 
 ```bash
-$ oc exec -it -n demo mysql-quickstart-0 -- bash
+~ $ kubectl exec -it -n demo mysql-quickstart-0 -- bash
 root@mysql-quickstart-0:/# mysql -uroot -p${MYSQL_ROOT_PASSWORD}
 mysql: [Warning] Using a password on the command line interface can be insecure.
 Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 252
+Your MySQL connection id is 500
 Server version: 8.0.23 MySQL Community Server - GPL
 
 Copyright (c) 2000, 2021, Oracle and/or its affiliates.
@@ -440,10 +415,21 @@ mysql> show databases;
 | sys                |
 | testdb             |
 +--------------------+
-5 rows in set (0.01 sec)
+5 rows in set (0.00 sec)
 
 mysql> drop database testdb;
-Query OK, 1 row affected (0.03 sec)
+Query OK, 1 row affected (0.15 sec)
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+4 rows in set (0.00 sec)
 ```
 
 ### Step 1: Create a RestoreSession
@@ -462,11 +448,6 @@ spec:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
       name: mysql-quickstart
-  runtimeSettings:
-    container:
-      securityContext:
-        runAsUser: 1000610000
-        runAsGroup: 1000610000
   rules:
     - snapshots: [latest]
 ```
@@ -475,9 +456,12 @@ Notice that the `securityContext` field is the same as we mentioned earlier in t
 Once this is applied, a RestoreSession will be created. Once it has succeeded, the database has been successfully recovered as you can see below:
 
 ```bash
-$ oc get restoresession -n demo
-NAME                   REPOSITORY   PHASE       AGE
-sample-mysql-restore   gcs-repo     Succeeded   41s
+$ kubectl get restoresession -n demo -w
+NAME                   REPOSITORY   PHASE     AGE
+sample-mysql-restore   gcs-repo     Running   9s
+sample-mysql-restore   gcs-repo     Running   11s
+sample-mysql-restore   gcs-repo     Succeeded   11s
+sample-mysql-restore   gcs-repo     Succeeded   11s
 ```
 
 Now let's check whether the database has been correctly restored:
@@ -493,7 +477,7 @@ mysql> show databases;
 | sys                |
 | testdb             |
 +--------------------+
-5 rows in set (0.02 sec)
+5 rows in set (0.00 sec)
 
 mysql> use testdb;
 Reading table information for completion of table and column names
@@ -506,7 +490,7 @@ mysql> show tables;
 +------------------+
 | MyGuests         |
 +------------------+
-1 row in set (0.01 sec)
+1 row in set (0.00 sec)
 ```
 
 > The recovery has been successful. If you faced any difficulties in the recovery process you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20OpenShift).

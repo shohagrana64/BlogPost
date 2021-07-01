@@ -1,0 +1,15 @@
+https://blog.byte.builders/post/openshift-mongodb/
+
+https://www.reddit.com/r/kubernetes/comments/o05sq4/running_mongodb_in_openshift_using_kubedb/
+
+https://app.slack.com/client/T09NY5SBT/C8149MREV (Slack Kubernetes kubedb)
+
+https://app.slack.com/client/T0XQT54BC/C0XQFLGRM/thread/C0XQFLGRM-1620911998.016200 (Slack AppsCode general)
+
+https://www.linkedin.com/posts/appscode_manage-mongodb-in-openshift-using-kubedb-activity-6810162941556613120-Fy6K
+
+https://twitter.com/AppsCodeHQ/status/1404453575275683847
+
+https://twitter.com/KubeDB/status/1404453575330340866
+
+https://news.ycombinator.com/submitted?id=shohagrana64

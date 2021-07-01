@@ -20,20 +20,20 @@ tags:
 
 ## Overview
 
-The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
+The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL, Redis and Memcached. You can find the guides to all the supported databases [here](https://kubedb.com/).
 In this tutorial we will deploy PostgreSQL database. We will cover the following steps:
 
 1) Install KubeDB
-2) Deploy Database
+2) Deploy Standalone Database
 3) Install Stash
 4) Backup Using Stash
 5) Recover Using Stash
 
-## Step 1: Installing KubeDB
+## Install KubeDB
 
 We will follow the following sub-steps to install KubeDB.
 
-### Step 1.1: Get Cluster ID
+### Step 1: Get Cluster ID
 
 We need the cluster ID to get the KubeDB License.
 To get cluster ID we can run the following command:
@@ -43,21 +43,20 @@ $ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
 08b1259c-5d51-4948-a2de-e2af8e6835a4 
 ```
 
-### Step 1.2: Get License
+### Step 2: Get License
 
 Go to [Appscode License Server](https://license-issuer.appscode.com/) to get the license.txt file. For this tutorial we will use KubeDB Enterprise Edition.
 
 ![License Server](licenseserver.png)
 
-### Step 1.3 Install KubeDB
+### Step 3: Install KubeDB
 
-We will use helm to install KubeDB.Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
+We will use helm to install KubeDB. Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
 Now, let's install `KubeDB`.
 
 ```bash
 $ helm repo add appscode https://charts.appscode.com/stable/
 $ helm repo update
-
 $ helm search repo appscode/kubedb
 NAME                        CHART VERSION APP VERSION DESCRIPTION
 appscode/kubedb             v2021.04.16   v2021.04.16 KubeDB by AppsCode - Production ready databases...
@@ -79,7 +78,7 @@ $ helm install kubedb appscode/kubedb \
 Let's verify the installation:
 
 ```bash
-$ watch oc get pods --all-namespaces -l "app.kubernetes
+$ watch oc get pods --all-namespaces -l "app.kubernetes.io/instance=kubedb"
 Every 2.0s: oc get pods --all-namespaces -l app.kubernetes.io/instance=kubedb                                                                                                      Shohag: Wed Apr 21 10:08:54 2021
 
 NAMESPACE     NAME                                        READY   STATUS    RESTARTS   AGE
@@ -124,7 +123,7 @@ redisopsrequests.ops.kubedb.com                   2021-04-21T04:05:54Z
 redisversions.catalog.kubedb.com                  2021-04-21T04:02:49Z
 ```
 
-## Step 2: Deploying Database
+## Step 2: Deploy Standalone Database
 
 Now we are going to Install PostgreSQL with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
@@ -135,7 +134,7 @@ $ oc create ns demo
 
 Now, before deploying the postgres CRD let's perform some checks to ensure that it is deployed correctly.
 
-### Check 1: StorageClass check
+### Check 1: StorageClass Check
 
 Let's check the availabe storage classes:
 
@@ -145,7 +144,7 @@ NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLO
 local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false    
 ```
 
-Here, you can see that I hace a storageclass named `local-path`. If you dont have a storage class you can run the follwing command:
+Here, we can see that I hace a storageclass named `local-path`. If you do not have a storage class you can run the follwing command:
 
 ```bash
 $ oc apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
@@ -155,14 +154,14 @@ This will create the storage-class named local-path.
 
 ### Check 2: Correct Permissions
 
-We need to ensure that the service account has correct permissions. To ensure correct permissions we should run:
+We can ensure that the service account has correct permissions by running the following command:
 
 ```bash
 $ oc adm policy add-scc-to-user privileged system:serviceaccount:local-path-storage:local-path-provisioner-service-account
 ```
 
-This command will give the required permissions. </br>
-Here is the yaml of the Postgres CRD we are going to use:
+OpenShift has Security Context Constraints for which the Postgres CRD is restricted to be deployed. The above command will give the required permissions. </br>
+Now, let's have a look into the yaml of the Postgres CRD we are going to use:
 
 ```yaml
 apiVersion: kubedb.com/v1alpha2
@@ -192,12 +191,12 @@ spec:
   terminationPolicy: WipeOut
 ```
 
-Let's save this yaml configuration into Postgres.yaml. Then apply using the command
-`oc apply -f Postgres.yaml`
+Let's save this yaml configuration into postgres.yaml. Then apply using the command
+`oc apply -f postgres.yaml`
 
 This yaml uses Postgres CRD.
 
-* In this yaml we can see in the `spec.version` field the version of Postgres. You can change and get updated version by running `oc get postgresversions` command. 
+* In this yaml we can see in the `spec.version` field the version of Postgres. You can change and get updated version by running `oc get postgresversions` command.
 * Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not. 
 * `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
 * Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/postgres/concepts/postgres/#specterminationpolicy).

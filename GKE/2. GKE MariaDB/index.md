@@ -1,7 +1,7 @@
 ---
-title: Manage MySQL in Openshift Using KubeDB
-date: 2021-06-28
-weight: 23
+title: How to Manage MariaDB in GKE Using KubeDB
+date: 2021-04-23
+weight: 22
 authors:
   - Shohag Rana
 tags:
@@ -20,8 +20,8 @@ tags:
 
 ## Overview
 
-The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL, Memcached and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
-In this tutorial we will deploy MySQL database. We will cover the following steps:
+The databases that KubeDB support are MongoDB, Elasticsearch, MySQL, MariaDB, PostgreSQL and Redis. You can find the guides to all the supported databases [here](https://kubedb.com/).
+In this tutorial we will deploy MariaDB database. We will cover the following steps:
 
 1) Install KubeDB
 2) Deploy Standalone Database
@@ -39,7 +39,7 @@ We need the cluster ID to get the KubeDB License.
 To get cluster ID we can run the following command:
 
 ```bash
-$ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
+$ kubectl get ns kube-system -o=jsonpath='{.metadata.uid}'
 08b1259c-5d51-4948-a2de-e2af8e6835a4 
 ```
 
@@ -47,11 +47,11 @@ $ oc get ns kube-system -o=jsonpath='{.metadata.uid}'
 
 Go to [Appscode License Server](https://license-issuer.appscode.com/) to get the license.txt file. For this tutorial we will use KubeDB Enterprise Edition.
 
-![The KubeVault Overview](licenseserver.png)
+![License Server](licenseserver.png)
 
-### Step 3: Install KubeDB
+### Step 3 Install KubeDB
 
-We will use helm to install KubeDB. Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
+We will use helm to install KubeDB.Please install helm [here](https://helm.sh/docs/intro/install/) if it is not already installed.
 Now, let's install `KubeDB`.
 
 ```bash
@@ -80,6 +80,7 @@ Let's verify the installation:
 
 ```bash
 $ watch kubectl get pods --all-namespaces -l "app.kubernetes.io/instance=kubedb"
+Every 2.0s: kubectl get pods --all-namespaces -l app.kubernetes.io/instance=kubedb                                                                                                      Shohag: Wed Apr 21 10:08:54 2021
 
 NAMESPACE     NAME                                        READY   STATUS    RESTARTS   AGE
 kube-system   kubedb-kubedb-autoscaler-569f66dbbc-qqmmb   1/1     Running   0          3m28s
@@ -91,7 +92,7 @@ kube-system   kubedb-kubedb-enterprise-b658c95fc-kwqt6    1/1     Running   0   
 We can see the CRD Groups that have been registered by the operator by running the following command:
 
 ```bash
-$ oc get crd -l app.kubernetes.io/name=kubedb
+$ kubectl get crd -l app.kubernetes.io/name=kubedb
 NAME                                              CREATED AT
 elasticsearchautoscalers.autoscaling.kubedb.com   2021-04-21T04:05:40Z
 elasticsearches.kubedb.com                        2021-04-21T04:05:37Z
@@ -123,54 +124,26 @@ redisopsrequests.ops.kubedb.com                   2021-04-21T04:05:54Z
 redisversions.catalog.kubedb.com                  2021-04-21T04:02:49Z
 ```
 
-## Step 2: Deploy Standalone Database
+## Deploy Standalone Database
 
-Now we are going to Install MySQL with the help of KubeDB.
+Now we are going to Install MariaDB with the help of KubeDB.
 At first, let's create a Namespace in which we will deploy the database.
 
 ```bash
-$ oc create ns demo
+$ kubectl create ns demo
+namespace/demo created
 ```
 
-Now, before deploying the MySQL CRD let's perform some checks to ensure that it will be deployed correctly.
-
-### Check 1: StorageClass Check
-
-Let's check the availabe storage classes:
-
-```bash
-$ oc get storageclass
-NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION
-local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false    
-```
-
-Here, we can see that I have a storageclass named `local-path`. If you do not have a storage class you can run the following command:
-
-```bash
-$ oc apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
-```
-
-This will create the storage-class named local-path.
-
-### Check 2: Correct Permissions
-
-We can ensure that the service account has correct permissions by running the following command:
-
-```bash
-$ oc adm policy add-scc-to-user privileged system:serviceaccount:local-path-storage:local-path-provisioner-service-account
-```
-
-OpenShift has Security Context Constraints for which the MySQL CRD is restricted to be deployed. The above command will give the required permissions. </br>
-Here is the yaml of the MySQL CRD we are going to use:
+Now, let's have a look into the yaml of the MariaDB CRD we are going to use:
 
 ```yaml
 apiVersion: kubedb.com/v1alpha2
-kind: MySQL
+kind: MariaDB
 metadata:
-  name: mysql-quickstart
+  name: sample-mariadb
   namespace: demo
 spec:
-  version: "8.0.23-v1"
+  version: "10.5.8"
   storageType: Durable
   storage:
     accessModes:
@@ -181,107 +154,110 @@ spec:
   terminationPolicy: WipeOut
 ```
 
-Let's save this yaml configuration into mysql.yaml. Then apply using the command
-`oc apply -f mysql.yaml`
+Let's save this yaml configuration into mariadb.yaml. Then apply using the command
+`kubectl apply -f mariadb.yaml`
 
-* In this yaml we can see in the `spec.version` field the version of MySQL. You can change and get updated version by running `oc get mysqlversions` command.
-* Another field to notice is the `spec.storagetype` field. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
-* `spec.storage.storageClassName` contains the name of the storage class we obtained before named "local-path".
-* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/mysql/concepts/database/#specterminationpolicy).
+* In this object we can see in the `spec.version` field, the version of MariaDB. You can list the supported versions by running `kubectl get mariadbversions` command.
+* Another field to notice is the `spec.storagetype`. This can be Durable or Ephemeral depending on the requirements of the database to be persistent or not.
+* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about the fields of terminationPolicy [HERE](https://kubedb.com/docs/v2021.04.16/guides/mariadb/concepts/mariadb/#specterminationpolicy).
 
-### Deploy MySQL CRD
-
-Once these are handled correctly and the MySQL CRD is deployed you will see that the following are created:
+After applying the command you will see that the following are created:
 
 ```bash
-$ oc get all -n demo
-NAME                     READY   STATUS    RESTARTS   AGE
-pod/mysql-quickstart-0   1/1     Running   0          2m3s
+$ kubectl get all -n demo
+NAME                   READY   STATUS    RESTARTS   AGE
+pod/sample-mariadb-0   1/1     Running   0          49s
 
-NAME                            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/mysql-quickstart        ClusterIP   10.217.5.152   <none>        3306/TCP   2m4s
-service/mysql-quickstart-pods   ClusterIP   None           <none>        3306/TCP   2m4s
+NAME                          TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+service/sample-mariadb        ClusterIP   10.52.13.48   <none>        3306/TCP   52s
+service/sample-mariadb-pods   ClusterIP   None          <none>        3306/TCP   52s
 
-NAME                                READY   AGE
-statefulset.apps/mysql-quickstart   1/1     2m6s
+NAME                              READY   AGE
+statefulset.apps/sample-mariadb   1/1     53s
 
-NAME                                                  TYPE               VERSION   AGE
-appbinding.appcatalog.appscode.com/mysql-quickstart   kubedb.com/mysql   8.0.23    2m10s
+NAME                                                TYPE                 VERSION   AGE
+appbinding.appcatalog.appscode.com/sample-mariadb   kubedb.com/mariadb   10.5.8    53s
 
-NAME                                VERSION     STATUS   AGE
-mysql.kubedb.com/mysql-quickstart   8.0.23-v1   Ready    2m13s
-
+NAME                                VERSION   STATUS   AGE
+mariadb.kubedb.com/sample-mariadb   10.5.8    Ready    56s
 ```
 
-> We have successfully deployed MySQL database in OpenShift. Now we can exec into the container to use the database.
+> We have successfully deployed MariaDB in Google Kubernetes Engine. Now we can exec into the container to use the database.
 
 ### Accessing Database Through CLI
 
 To access the database through CLI we have to exec into the container:
 
  ```bash
-$ oc exec -it -n demo mysql-quickstart-0 -- bash
-root@mysql-quickstart-0:/# 
- ```
+~ $ kubectl get secrets -n demo sample-mariadb-auth -o jsonpath='{.data.\username}' | base64 -d
+root⏎                                                                                                    ~ $ kubectl get secrets -n demo sample-mariadb-auth -o jsonpath='{.data.\password}' | base64 -d
+rPlMx1tiDOeMaBhg⏎                                                                                        ~ $ kubectl exec -it -n demo sample-mariadb-0 -- mariadb -u root --password='rPlMx1tiDOeMaBhg'
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 49
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
 
- Then to login into mysql:
-
- ```bash
-root@mysql-quickstart-0:/# mysql -uroot -p${MYSQL_ROOT_PASSWORD}
-Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 25
-Server version: 8.0.23 MySQL Community Server - GPL
-
-Copyright (c) 2000, 2021, Oracle and/or its affiliates.
-
-Oracle is a registered trademark of Oracle Corporation and/or its
-affiliates. Other names may be trademarks of their respective
-owners.
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
 
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> 
  ```
 
-Now we have entered into the MySQL CLI and we can create and delete as we want.
-Let's create a database called 'testdb' and create a table called MyGuests:
+Now we have entered into the MariaDB CLI and we can create and delete as we want.
+Let's create a database called 'company' and create a test table called 'employees' and insert some dummy values into the table:
 
 ```bash
-mysql> create database testdb;
-mysql> show databases;
-
+MariaDB [(none)]> show databases;
 +--------------------+
 | Database           |
 +--------------------+
 | information_schema |
 | mysql              |
 | performance_schema |
-| sys                |
-| testdb             |
 +--------------------+
-5 rows in set (0.01 sec)
-mysql> use testdb
+3 rows in set (0.001 sec)
 
-Reading table information for completion of table and column names
-You can turn off this feature to get a quicker startup with -A
+MariaDB [(none)]> create database company;
+Query OK, 1 row affected (0.000 sec)
 
-mysql> CREATE TABLE MyGuests (
-     id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-     firstname VARCHAR(30) NOT NULL,
-     lastname VARCHAR(30) NOT NULL,
-     email VARCHAR(50),
-     reg_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-     );
-Query OK, 0 rows affected, 1 warning (0.02 sec)
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| company            |
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.000 sec)
 
-mysql> show tables;
-+------------------+
-| Tables_in_testdb |
-+------------------+
-| MyGuests         |
-+------------------+
-1 row in set (0.02 sec)
+MariaDB [(none)]> create table company.employees ( name varchar(50), salary int);
+Query OK, 0 rows affected (0.012 sec)
+
+MariaDB [(none)]> show tables in company;
++-------------------+
+| Tables_in_company |
++-------------------+
+| employees         |
++-------------------+
+1 row in set (0.000 sec)
+
+MariaDB [(none)]> insert into company.employees values ('John Doe', 5000);
+Query OK, 1 row affected (0.002 sec)
+
+MariaDB [(none)]> select * from company.employees;
++----------+--------+
+| name     | salary |
++----------+--------+
+| John Doe |   5000 |
++----------+--------+
+1 row in set (0.000 sec)
+
+MariaDB [(none)]> exit
+Bye
 ```
 
-> This was just one example of database deployment. The other databases that KubeDB support are MongoDB, Elasticsearch, MariaDB, PostgreSQL, Memcached and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
+> This was just one example of database deployment. The other databases that KubeDB support are MySQL, Postgres, Elasticsearch, MongoDB and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
 
 ## Backup and Recover Database Using Stash
 
@@ -302,7 +278,9 @@ $ helm install stash appscode/stash             \
 Let's verify the installation:
 
 ```bash
-$ oc get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+$ kubectl get pods --all-namespaces -l app.kubernetes.io/name=stash-enterprise --watch
+NAMESPACE     NAME                                      READY   STATUS    RESTARTS   AGE
+kube-system   stash-stash-enterprise-77bd9869c6-9wjvv   2/2     Running   0          7d19h
 ```
 
 ### Step 2: Prepare Backend
@@ -311,15 +289,15 @@ Stash supports various backends for storing data snapshots. It can be a cloud st
 
 For this tutorial we are going to use gcs-bucket. You can find other setups [here](https://stash.run/docs/v2021.04.12/guides/latest/backends/overview/).
 
- ![My GCS bucket](gcsEmptyBucket.png)
+ ![My Empty GCS bucket](gcsEmptyBucket.png)
 
 At first we need to create a secret so that we can access the gcs bucket. We can do that by the following code:
 
- ```bash
+```bash
 $ echo -n 'YOURPASSWORD' > RESTIC_PASSWORD
 $ echo -n 'YOURPROJECTNAME' > GOOGLE_PROJECT_ID
 $ cat /PATH/TO/JSONKEY.json > GOOGLE_SERVICE_ACCOUNT_JSON_KEY
-$ oc create secret generic -n demo gcs-secret \
+$ kubectl create secret generic -n demo gcs-secret \
         --from-file=./RESTIC_PASSWORD \
         --from-file=./GOOGLE_PROJECT_ID \
         --from-file=./GOOGLE_SERVICE_ACCOUNT_JSON_KEY
@@ -337,7 +315,7 @@ spec:
   backend:
     gcs:
       bucket: stash-shohag
-      prefix: /demo/mysql/sample-mysql
+      prefix: /demo/mariaDB/sample-maria-backup
     storageSecretName: gcs-secret
 ```
 
@@ -352,7 +330,7 @@ Now we need to create a BackupConfiguration file that specifies what to backup, 
 apiVersion: stash.appscode.com/v1beta1
 kind: BackupConfiguration
 metadata:
-  name: sample-mysql-backup
+  name: sample-mariadb-backup
   namespace: demo
 spec:
   schedule: "*/5 * * * *"
@@ -362,38 +340,23 @@ spec:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
-      name: mysql-quickstart
-  runtimeSettings:
-    container:
-      securityContext:
-        runAsUser: 1000610000
-        runAsGroup: 1000610000
+      name: sample-mariadb
   retentionPolicy:
     name: keep-last-5
     keepLast: 5
     prune: true
 ```
 
-* Notice that the BackupConfiguration contains `spec.runtimeSettings.container.securitycontext` field. The user and group security context need to be changed in OpenShift to the values within 1000610000 - 1000619999.
 * This BackupConfiguration creates a cronjob that backs up the specified database (`spec.target`) every 5 minutes.
 * `spec.repository` contaiins the secret we created before called `gcs-secret`.
 * `spec.target.ref` contains the reference to the appbinding that we want to backup.
 
 So, after 5 minutes we can see the following status:
 
-
 ```bash
-$ oc get backupsession -n demo
-NAME                             INVOKER-TYPE          INVOKER-NAME          PHASE       AGE
-sample-mysql-backup-1624861209   BackupConfiguration   sample-mysql-backup   Succeeded   103s
-
-$ oc get repository -n demo
-NAME       INTEGRITY   SIZE        SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
-gcs-repo   true        3.670 MiB   1                2m18s                    15m
-
-$ oc get backupconfiguration -n demo
-NAME                  TASK   SCHEDULE      PAUSED   AGE
-sample-mysql-backup          */5 * * * *            16m
+$ kubectl get backupsession -n demo
+NAME                               INVOKER-TYPE          INVOKER-NAME            PHASE       AGE
+sample-mariadb-backup-1623389711   BackupConfiguration   sample-mariadb-backup   Succeeded   2m28s
 
 ```
 
@@ -401,7 +364,7 @@ Now if we check our GCS bucket we can see that the backup has been successful.
 
 ![gcsSuccess](gcsSuccess.png)
 
-> **If you reached here CONGRATULATIONS!! :confetti_ball:  :partying_face: :confetti_ball: The backup has been successful**. If you didn't its okay. You can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20OpenShift).
+> The backup has been successful. If you have any queries, you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20GKE).
 
 ## Recover
 
@@ -409,50 +372,60 @@ Let's think of a scenario in which the database has been accidentally deleted or
 In such a case, we have to pause the BackupConfiguration so that the failed/damaged database does not get backed up into the cloud:
 
 ```bash
-oc patch backupconfiguration -n demo sample-mysql-backup --type="merge" --patch='{"spec": {"paused": true}}'
+kubectl patch backupconfiguration -n demo sample-mariadb-backup --type="merge" --patch='{"spec": {"paused": true}}'
 ```
 
 At first let's simulate accidental database deletion.
 
 ```bash
-$ oc exec -it -n demo mysql-quickstart-0 -- bash
-root@mysql-quickstart-0:/# mysql -uroot -p${MYSQL_ROOT_PASSWORD}
-mysql: [Warning] Using a password on the command line interface can be insecure.
-Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 252
-Server version: 8.0.23 MySQL Community Server - GPL
+$ kubectl exec -it -n demo sample-mariadb-0 -c mariadb -- bash
+root@sample-mariadb-0:/# mysql -u${MYSQL_ROOT_USERNAME} -p${MYSQL_ROOT_PASSWORD}
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 148
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
 
-Copyright (c) 2000, 2021, Oracle and/or its affiliates.
-
-Oracle is a registered trademark of Oracle Corporation and/or its
-affiliates. Other names may be trademarks of their respective
-owners.
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
 
 Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-mysql> show databases;
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| company            |
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+4 rows in set (0.000 sec)
+
+MariaDB [(none)]> drop database company;
+Query OK, 1 row affected (0.034 sec)
+
+MariaDB [(none)]> show databases;
 +--------------------+
 | Database           |
 +--------------------+
 | information_schema |
 | mysql              |
 | performance_schema |
-| sys                |
-| testdb             |
 +--------------------+
-5 rows in set (0.01 sec)
+3 rows in set (0.000 sec)
 
-mysql> drop database testdb;
-Query OK, 1 row affected (0.03 sec)
+MariaDB [(none)]> exit
+Bye
+root@sample-mariadb-0:/# exit
 ```
 
 ### Step 1: Create a RestoreSession
+
+Now, let's create a RestoreSession that will initiate restoring from the cloud.
 
 ```yaml
 apiVersion: stash.appscode.com/v1beta1
 kind: RestoreSession
 metadata:
-  name: sample-mysql-restore
+  name: sample-mariadb-restore
   namespace: demo
 spec:
   repository:
@@ -461,55 +434,65 @@ spec:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
-      name: mysql-quickstart
-  runtimeSettings:
-    container:
-      securityContext:
-        runAsUser: 1000610000
-        runAsGroup: 1000610000
+      name: sample-mariadb
   rules:
     - snapshots: [latest]
 ```
 
-Notice that the `securityContext` field is the same as we mentioned earlier in the BackupConfiguration. This RestoreSession specifies where the data will be restored.
+This RestoreSession specifies where the data will be restored.
 Once this is applied, a RestoreSession will be created. Once it has succeeded, the database has been successfully recovered as you can see below:
 
 ```bash
-$ oc get restoresession -n demo
-NAME                   REPOSITORY   PHASE       AGE
-sample-mysql-restore   gcs-repo     Succeeded   41s
+$ kubectl get restoresession -n demo
+NAME                     REPOSITORY   PHASE       AGE
+sample-mariadb-restore   gcs-repo     Succeeded   23s
 ```
 
 Now let's check whether the database has been correctly restored:
 
 ```bash
-mysql> show databases;
+$ kubectl exec -it -n demo sample-mariadb-0 -c mariadb -- bash
+root@sample-mariadb-0:/# mysql -u${MYSQL_ROOT_USERNAME} -p${MYSQL_ROOT_PASSWORD}
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 172
+Server version: 10.5.8-MariaDB-1:10.5.8+maria~focal mariadb.org binary distribution
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> show databases;
 +--------------------+
 | Database           |
 +--------------------+
+| company            |
 | information_schema |
 | mysql              |
 | performance_schema |
-| sys                |
-| testdb             |
 +--------------------+
-5 rows in set (0.02 sec)
+4 rows in set (0.001 sec)
 
-mysql> use testdb;
-Reading table information for completion of table and column names
-You can turn off this feature to get a quicker startup with -A
+MariaDB [(none)]> show tables in company;
++-------------------+
+| Tables_in_company |
++-------------------+
+| employees         |
++-------------------+
+1 row in set (0.000 sec)
 
-Database changed
-mysql> show tables;
-+------------------+
-| Tables_in_testdb |
-+------------------+
-| MyGuests         |
-+------------------+
-1 row in set (0.01 sec)
+MariaDB [(none)]> select * from company.employees;
++----------+--------+
+| name     | salary |
++----------+--------+
+| John Doe |   5000 |
++----------+--------+
+1 row in set (0.001 sec)
+
+MariaDB [(none)]> Bye
+root@sample-mariadb-0:/# exit
 ```
 
-> The recovery has been successful. If you faced any difficulties in the recovery process you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20OpenShift).
+> The recovery has been successful. If you faced any difficulties in the recovery process you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20GKE).
 
 ## Support
 
