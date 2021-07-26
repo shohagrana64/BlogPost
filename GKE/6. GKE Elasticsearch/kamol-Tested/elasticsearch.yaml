@@ -1,0 +1,18 @@
+apiVersion: kubedb.com/v1alpha2
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: demo
+spec:
+  version: xpack-7.13.2
+  storageType: Durable
+  replicas: 3
+  storage:
+   # storageClassName: "linode-block-storage"
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi 
+
+        #https://github.com/appscode/kubedb-samples/pull/6/files#diff-2440fef4dc923c8b5464b26a553eb78c97996513755f8cc24e5c24f382254bf8

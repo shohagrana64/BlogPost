@@ -1,0 +1,31 @@
+apiVersion: stash.appscode.com/v1beta1
+kind: RestoreSession
+metadata:
+  name: elasticsearch-init
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: elasticsearches.kubedb.com
+spec:
+  repository:
+    name: elasticsearch-repo
+  target:
+    ref:
+      apiVersion: appcatalog.appscode.com/v1alpha1
+      kind: AppBinding
+      name: elasticsearch
+  interimVolumeTemplate:
+    metadata:
+      name: elasticsearch-init-tmp-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      #storageClassName: "linode-block-storage"
+      resources:
+        requests:
+          storage: 1Gi
+  rules:
+  - snapshots: [latest]
+  runtimeSettings:
+    container:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0 
