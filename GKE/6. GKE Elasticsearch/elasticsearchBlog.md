@@ -40,7 +40,7 @@ To get cluster ID we can run the following command:
 
 ```bash
 $ kubectl get ns kube-system -o=jsonpath='{.metadata.uid}'
-9cf8ed1e-641b-41ea-b03d-253ddac16401
+92c71a83-22b3-4476-ba70-eb9fe3b57d53
 ```
 
 ### Step 2: Get License
@@ -140,64 +140,61 @@ Here is the yaml of thfe Elasticsearch CRD we are going to use:
 apiVersion: kubedb.com/v1alpha2
 kind: Elasticsearch
 metadata:
-  name: es-quickstart
+  name: elasticsearch
   namespace: demo
 spec:
-  version: xpack-7.9.1-v1
-  enableSSL: true
-  replicas: 3
+  version: xpack-7.13.2
   storageType: Durable
+  replicas: 3
   storage:
-    storageClassName: "standard"
     accessModes:
     - ReadWriteOnce
     resources:
       requests:
-        storage: 1Gi
-  terminationPolicy: WipeOut
+        storage: 1Gi 
 ```
 
 Let's save this yaml configuration into elasticsearch.yaml. Then apply using the command
 `kubectl apply -f elasticsearch.yaml`
 
-* In this yaml we can see in the `spec.version` field the version of MongoDB. You can change and get updated version by running `kubectl get mongodbversions` command.
+* In this yaml we can see in the `spec.version` field the version of MongoDB. You can change and get updated version by running `kubectl get elasticsearchversions` command.
 * Another field to notice is the `spec.storageType` field. This can be `Durable` or `Ephemeral` depending on the requirements of the database to be persistent or not.
-* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/v2021.04.16/guides/mongodb/concepts/mongodb/#specterminationpolicy).
+* Lastly, the `spec.terminationPolicy` field is *Wipeout* means that the database will be deleted without restrictions. It can also be "Halt", "Delete" and "DoNotTerminate". Learn More about these [HERE](https://kubedb.com/docs/latest/guides/elasticsearch/concepts/elasticsearch/#specterminationpolicy).
 
-Once these are handled correctly and the MongoDB object is deployed you will see that the following are created:
+Once these are handled correctly and the Elasticsearch object is deployed you will see that the following are created:
 
 ```bash
 $ kubectl get all -n demo
 NAME                  READY   STATUS    RESTARTS   AGE
-pod/es-quickstart-0   1/1     Running   0          13m
-pod/es-quickstart-1   1/1     Running   0          12m
-pod/es-quickstart-2   1/1     Running   0          3m2s
+pod/elasticsearch-0   1/1     Running   0          3m10s
+pod/elasticsearch-1   1/1     Running   0          2m25s
+pod/elasticsearch-2   1/1     Running   0          103s
 
 NAME                           TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
-service/es-quickstart          ClusterIP   10.4.9.80    <none>        9200/TCP   13m
-service/es-quickstart-master   ClusterIP   None         <none>        9300/TCP   13m
-service/es-quickstart-pods     ClusterIP   None         <none>        9200/TCP   13m
+service/elasticsearch          ClusterIP   10.8.6.187   <none>        9200/TCP   3m11s
+service/elasticsearch-master   ClusterIP   None         <none>        9300/TCP   3m11s
+service/elasticsearch-pods     ClusterIP   None         <none>        9200/TCP   3m12s
 
 NAME                             READY   AGE
-statefulset.apps/es-quickstart   3/3     13m
+statefulset.apps/elasticsearch   3/3     3m11s
 
 NAME                                               TYPE                       VERSION   AGE
-appbinding.appcatalog.appscode.com/es-quickstart   kubedb.com/elasticsearch   7.9.1     13m
+appbinding.appcatalog.appscode.com/elasticsearch   kubedb.com/elasticsearch   7.13.2    3m13s
 
-NAME                                     VERSION          STATUS   AGE
-elasticsearch.kubedb.com/es-quickstart   xpack-7.9.1-v1   Ready    13m
+NAME                                     VERSION        STATUS   AGE
+elasticsearch.kubedb.com/elasticsearch   xpack-7.13.2   Ready    3m16s
 ```
 
 > We have successfully deployed Elasticsearch in GKE. Now we can exec into the container to use the database.
-Please note that KubeDB operator has created a new Secret called `es-quickstart-elastic-cred` for storing the password for `elasticsearch` superuser. This secret contains a `username` key which contains the username for MongoDB superuser and a password key which contains the `password` for MongoDB superuser.
+Please note that KubeDB operator has created a new Secret called `es-quickstart-elastic-cred` for storing the password for `elasticsearch` superuser. This secret contains a `username` key which contains the username for Elasticsearch superuser and a password key which contains the `password` for Elasticsearch superuser.
 
 We can see the username and password:
 
 ```bash
-$ kubectl  get secrets -n demo es-quickstart-elastic-cred -o jsonpath='{.data.\username}' | base64 -d
+$ kubectl  get secrets -n demo elasticsearch-elastic-cred -o jsonpath='{.data.\username}' | base64 -d
 elastic
-$ kubectl  get secrets -n demo es-quickstart-elastic-cred -o jsonpath='{.data.\password}' | base64 -d
-PWKIewhmcncdA2K4
+$ kubectl  get secrets -n demo elasticsearch-elastic-cred -o jsonpath='{.data.\password}' | base64 -d
+h5~rCeZ19~U&$rGk
 ```
 
 ### Accessing Database Through CLI
@@ -205,7 +202,7 @@ PWKIewhmcncdA2K4
 To access the database through CLI we can either port-forward the service or we can exec into the pod and insert data from there.
 
  ```bash
-$ kubectl port-forward -n demo service/es-quickstart 9200
+$ kubectl port-forward -n demo service/elasticsearch 9200
 Forwarding from 127.0.0.1:9200 -> 9200
 Forwarding from [::1]:9200 -> 9200
  ```
@@ -213,23 +210,23 @@ Forwarding from [::1]:9200 -> 9200
 Then export the username and password:
 
  ```bash
-$ export USER=$(kubectl get secrets -n demo es-quickstart-elastic-cred -o jsonpath='{.data.\username}' | base64 -d)
-$ export PASSWORD=$(kubectl get secrets -n demo es-quickstart-elastic-cred -o jsonpath='{.data.\password}' | base64 -d)
+$ export USER=$(kubectl get secrets -n demo elasticsearch-elastic-cred -o jsonpath='{.data.\username}' | base64 -d)
+$ export PASSWORD=$(kubectl get secrets -n demo elasticsearch-elastic-cred -o jsonpath='{.data.\password}' | base64 -d)
  ```
 
 Now, we can insert into the database:
 
 ```bash
-curl -k -XPOST --user "$USER:$PASSWORD" "https://localhost:9200/products/_doc?pretty" -H 'Content-Type: application/json' -d'{
-             "name": "Stash",
-             "vendor": "AppsCode Inc.",
-             "description": "Backup tool for Kubernetes workloads"
-         }
-         '
+$ curl -k -XPOST --user $USER:$PASSWORD "http://localhost:9200/products/_doc?pretty" -H 'Content-Type: application/json' -d'{
+                                         "name": "Stash",
+                                         "vendor": "AppsCode Inc.",
+                                         "description": "Backup tool for Kubernetes workloads"
+                                     }
+                                     '
 {
   "_index" : "products",
   "_type" : "_doc",
-  "_id" : "w3VWo3oBWdy787ASRuaw",
+  "_id" : "4CZLAHsBi6IZRt5DDgpb",
   "_version" : 1,
   "result" : "created",
   "_shards" : {
@@ -240,18 +237,19 @@ curl -k -XPOST --user "$USER:$PASSWORD" "https://localhost:9200/products/_doc?pr
   "_seq_no" : 0,
   "_primary_term" : 1
 }
+
 # Let's insert another data into the "products" index. 
-curl -k -XPOST --user "$USER:$PASSWORD" "https://localhost:9200/products/_doc?pretty" -H 'Content-Type: application/json' -d'
-{
-    "name": "Stash",
-    "vendor": "AppsCode Inc.",
-    "description": "Backup tool for Kubernetes workloads"
-}
-'
+$ curl -k -XPOST --user $USER:$PASSWORD "http://localhost:9200/products/_doc?pretty" -H 'Content-Type: application/json' -d'
+                            {
+                                "name": "KubeDB",
+                                "vendor": "AppsCode Inc.",
+                                "description": "Database Operator for Kubernetes"
+                            }
+                            '
 {
   "_index" : "products",
   "_type" : "_doc",
-  "_id" : "xHVYo3oBWdy787ASFuYy",
+  "_id" : "4SZVAHsBi6IZRt5Djgqt",
   "_version" : 1,
   "result" : "created",
   "_shards" : {
@@ -262,18 +260,19 @@ curl -k -XPOST --user "$USER:$PASSWORD" "https://localhost:9200/products/_doc?pr
   "_seq_no" : 1,
   "_primary_term" : 1
 }
+
 ```
 
 Now, let’s verify that the indexes have been created successfully.
 
 ```bash
-$ curl -k -XGET --user "$USER:$PASSWORD" "https://localhost:9200/_cat/indices?v&s=index&pretty"
+$ curl -k -XGET --user $USER:$PASSWORD "http://localhost:9200/_cat/indices?v&s=index&pretty"
 health status index    uuid                   pri rep docs.count docs.deleted store.size pri.store.size
-green  open   products ZZ4-NbRySv-L3C8VugPmqg   1   1          2            0     20.7kb         10.3kb
+green  open   products 1_3wiCS1Qg2GA3KVygx5Tg   1   1          1            0     10.7kb          5.3kb
 
-$ curl -k -XGET --user "$USER:$PASSWORD" "https://localhost:9200/products/_search?pretty"
+$ curl -k -XGET --user $USER:$PASSWORD "http://localhost:9200/products/_search?pretty"
 {
-  "took" : 136,
+  "took" : 871,
   "timed_out" : false,
   "_shards" : {
     "total" : 1,
@@ -291,7 +290,7 @@ $ curl -k -XGET --user "$USER:$PASSWORD" "https://localhost:9200/products/_searc
       {
         "_index" : "products",
         "_type" : "_doc",
-        "_id" : "w3VWo3oBWdy787ASRuaw",
+        "_id" : "4CZLAHsBi6IZRt5DDgpb",
         "_score" : 1.0,
         "_source" : {
           "name" : "Stash",
@@ -302,18 +301,17 @@ $ curl -k -XGET --user "$USER:$PASSWORD" "https://localhost:9200/products/_searc
       {
         "_index" : "products",
         "_type" : "_doc",
-        "_id" : "xHVYo3oBWdy787ASFuYy",
+        "_id" : "4SZVAHsBi6IZRt5Djgqt",
         "_score" : 1.0,
         "_source" : {
-          "name" : "Stash",
+          "name" : "KubeDB",
           "vendor" : "AppsCode Inc.",
-          "description" : "Backup tool for Kubernetes workloads"
+          "description" : "Database Operator for Kubernetes"
         }
       }
     ]
   }
 }
-
 ```
 
 > This was just one example of database deployment. The other databases that KubeDB support are MySQL, Postgres, Elasticsearch, MariaDB and Redis. The tutorials on how to deploy these into the cluster can be found [HERE](https://kubedb.com/)
@@ -371,14 +369,14 @@ $ kubectl create secret generic -n demo gcs-secret \
 apiVersion: stash.appscode.com/v1alpha1
 kind: Repository
 metadata:
-  name: gcs-repo
+  name: elasticsearch-repo
   namespace: demo
 spec:
   backend:
     gcs:
       bucket: stash-shohag
-      prefix: /demo/gke-elasticsearch/sample-elasticsearch
-    storageSecretName: gcs-secret
+      prefix: /elasticsearch
+    storageSecretName: gcs-secret 
 ```
 
 This repository CRD specifies the gcs-secret we created before and stores the name and path to the gcs-bucket. It also specifies the location in the bucket where we want to backup our database.
@@ -392,21 +390,36 @@ Now we need to create a BackupConfiguration file that specifies what to backup, 
 apiVersion: stash.appscode.com/v1beta1
 kind: BackupConfiguration
 metadata:
-  name: sample-elasticsearch-backup
+  name: elasticsearch
   namespace: demo
 spec:
   schedule: "*/5 * * * *"
+  task:
+    name: elasticsearch-backup-7.3.2
   repository:
-    name: gcs-repo
+    name: elasticsearch-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
-      name: es-quickstart
+      name: elasticsearch
+  interimVolumeTemplate:
+    metadata:
+      name: elasticsearch-backup-tmp-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
   retentionPolicy:
     name: keep-last-5
     keepLast: 5
     prune: true
+  runtimeSettings:
+    container:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0 
 ```
 
 * BackupConfiguration creates a cronjob that backs up the specified database (`spec.target`) every 5 minutes.
@@ -416,37 +429,37 @@ So, after 5 minutes we can see the following status:
 
 ```bash
 $ kubectl get backupsession -n demo
-NAME                                     INVOKER-TYPE          INVOKER-NAME                  PHASE       AGE
-sample-elasticsearch-backup-1626254412   BackupConfiguration   sample-elasticsearch-backup   Succeeded   49s
+NAME                       INVOKER-TYPE          INVOKER-NAME    PHASE       AGE
+elasticsearch-1627799712   BackupConfiguration   elasticsearch   Succeeded   76s
 $ kubectl get repository -n demo
-NAME       INTEGRITY   SIZE        SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
-gcs-repo   true        1.943 KiB   1                58s                      3m52s
+NAME                 INTEGRITY   SIZE    SNAPSHOT-COUNT   LAST-SUCCESSFUL-BACKUP   AGE
+elasticsearch-repo   true        849 B   1                110s                     14m
 ```
 
 Now if we check our GCS bucket we can see that the backup has been successful.
 
 ![gcsSuccess](gcsSuccess.png)
 
-> **If you have reached here, CONGRATULATIONS!! :confetti_ball:  :partying_face: :confetti_ball: You have successfully backed up MongoDB using Stash.** If you had any problem during the backup process, you can reach out to us via [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20GKE).
+> **If you have reached here, CONGRATULATIONS!! :confetti_ball:  :partying_face: :confetti_ball: You have successfully backed up Elasticsearch using Stash.** If you had any problem during the backup process, you can reach out to us via [EMAIL](mailto:support@appscode.com?subject=Stash%20Backup%20Failed%20in%20GKE).
 
-## Recover MongoDB Database Using Stash
+## Recover Elasticsearch Database Using Stash
 
 Let's think of a scenario in which the database has been accidentally deleted or there was an error in the database causing it to crash.
 In such a case, we have to pause the BackupConfiguration so that the failed/damaged database does not get backed up into the cloud:
 
 ```bash
-kubectl patch backupconfiguration -n demo sample-elasticsearch-backup --type="merge" --patch='{"spec": {"paused": true}}'
+kubectl patch backupconfiguration -n demo elasticsearch --type="merge" --patch='{"spec": {"paused": true}}'
 ```
 
 At first let's simulate accidental database deletion.
 
 ```bash
-$ curl -k -XDELETE --user "$USER:$PASSWORD" "https://localhost:9200/products?pretty"
+$ curl -k -XDELETE --user $USER:$PASSWORD "http://localhost:9200/products?pretty"
 {
   "acknowledged" : true
 }
 
-$ curl -k -XGET --user "$USER:$PASSWORD" "https://localhost:9200/_cat/indices?v&s=index&pretty"
+$ curl -k -XGET --user $USER:$PASSWORD "http://localhost:9200/_cat/indices?v&s=index&pretty"
 health status index uuid pri rep docs.count docs.deleted store.size pri.store.size
 
 ```
@@ -459,27 +472,34 @@ Now, let's create a RestoreSession that will initiate restoring from the cloud.
 apiVersion: stash.appscode.com/v1beta1
 kind: RestoreSession
 metadata:
-  name: sample-es-restore
+  name: elasticsearch-init
   namespace: demo
+  labels:
+    app.kubernetes.io/name: elasticsearches.kubedb.com
 spec:
   repository:
-    name: gcs-repo
+    name: elasticsearch-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
       kind: AppBinding
-      name: es-quickstart
+      name: elasticsearch
   interimVolumeTemplate:
     metadata:
-      name: sample-es-restore-tmp-storage
+      name: elasticsearch-init-tmp-storage
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      storageClassName: "standard"
+      #storageClassName: "linode-block-storage"
       resources:
         requests:
           storage: 1Gi
   rules:
   - snapshots: [latest]
+  runtimeSettings:
+    container:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0 
 ```
 
 This RestoreSession specifies where the data will be restored.
@@ -487,21 +507,58 @@ Once this is applied, a RestoreSession will be created. Once it has succeeded, t
 
 ```bash
 $ kubectl get restoresession -n demo
-NAME                REPOSITORY   PHASE       AGE
-sample-es-restore   gcs-repo     Succeeded   45s
-
+NAME                 REPOSITORY           PHASE       AGE
+elasticsearch-init   elasticsearch-repo   Succeeded   51s
 ```
 
 Now let's check whether the database has been correctly restored:
 
 ```bash
-> show dbs
-admin   0.000GB
-config  0.000GB
-local   0.000GB
-testdb  0.000GB
-> db.movie.find().pretty()
-{ "_id" : ObjectId("60daad277430604624c4159e"), "name" : "batman" }
+$ curl -k -XGET --user $USER:$PASSWORD "http://localhost:9200/_cat/indices?v&s=index&pretty"
+health status index    uuid                   pri rep docs.count docs.deleted store.size pri.store.size
+green  open   products 2rhoCKKwTa-8ngEtktxKKA   1   1          2            0     10.9kb          5.4kb
+$ curl -k -XGET --user $USER:$PASSWORD "http://localhost:9200/products/_search?pretty"
+{
+  "took" : 7,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 2,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "products",
+        "_type" : "_doc",
+        "_id" : "4SZVAHsBi6IZRt5Djgqt",
+        "_score" : 1.0,
+        "_source" : {
+          "name" : "KubeDB",
+          "vendor" : "AppsCode Inc.",
+          "description" : "Database Operator for Kubernetes"
+        }
+      },
+      {
+        "_index" : "products",
+        "_type" : "_doc",
+        "_id" : "4CZLAHsBi6IZRt5DDgpb",
+        "_score" : 1.0,
+        "_source" : {
+          "name" : "Stash",
+          "vendor" : "AppsCode Inc.",
+          "description" : "Backup tool for Kubernetes workloads"
+        }
+      }
+    ]
+  }
+}
 ```
 
 > The recovery has been successful. If you faced any difficulties in the recovery process, you can reach out to us through [EMAIL](mailto:support@appscode.com?subject=Stash%20Recovery%20Failed%20in%20GKE).
