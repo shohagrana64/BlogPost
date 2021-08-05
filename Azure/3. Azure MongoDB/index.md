@@ -1,5 +1,5 @@
 ---
-title: Manage MongoDB in GKE Using KubeDB
+title: Manage MongoDB in Azure Using KubeDB
 date: 2021-07-12
 weight: 22
 authors:
@@ -182,7 +182,7 @@ NAME                                VERSION   STATUS   AGE
 mongodb.kubedb.com/mgo-quickstart   4.2.3     Ready    103s
 ```
 
-> We have successfully deployed MongoDB in GKE. Now we can exec into the container to use the database.
+> We have successfully deployed MongoDB in Azure. Now we can exec into the container to use the database.
 Please note that KubeDB operator has created a new Secret called `mgo-quickstart-auth` for storing the password for `mongodb` superuser. This secret contains a `username` key which contains the username for MongoDB superuser and a password key which contains the `password` for MongoDB superuser.
 
 ### Accessing Database Through CLI
@@ -268,20 +268,21 @@ kube-system   stash-stash-enterprise-6979884d85-7hdfm   2/2     Running         
 
 Stash supports various backends for storing data snapshots. It can be a cloud storage like GCS bucket, AWS S3, Azure Blob Storage etc. or a Kubernetes persistent volume like HostPath, PersistentVolumeClaim, NFS etc.
 
-For this tutorial we are going to use gcs-bucket. You can find other setups [here](https://stash.run/docs/v2021.06.23/guides/latest/backends/overview/).
+For this tutorial we are going to use Azure Blob Storage. You can find other setups [here](https://stash.run/docs/latest/guides/latest/backends/overview/).
 
  ![My Empty GCS bucket](gcsEmptyBucket.png)
 
 At first we need to create a secret so that we can access the gcs bucket. We can do that by the following code:
 
 ```bash
-$ echo -n 'YOURPASSWORD' > RESTIC_PASSWORD
-$ echo -n 'YOURPROJECTNAME' > GOOGLE_PROJECT_ID
-$ cat /PATH/TO/JSONKEY.json > GOOGLE_SERVICE_ACCOUNT_JSON_KEY
-$ kubectl create secret generic -n demo gcs-secret \
-        --from-file=./RESTIC_PASSWORD \
-        --from-file=./GOOGLE_PROJECT_ID \
-        --from-file=./GOOGLE_SERVICE_ACCOUNT_JSON_KEY
+$ echo -n 'changeit' > RESTIC_PASSWORD
+$ echo -n '<your-azure-storage-account-name>' > AZURE_ACCOUNT_NAME
+$ echo -n '<your-azure-storage-account-key>' > AZURE_ACCOUNT_KEY
+$ kubectl create secret generic -n demo azure-secret \
+    --from-file=./RESTIC_PASSWORD \
+    --from-file=./AZURE_ACCOUNT_NAME \
+    --from-file=./AZURE_ACCOUNT_KEY
+secret/azure-secret created
  ```
 
 ### Step 3: Create Repository
@@ -290,14 +291,14 @@ $ kubectl create secret generic -n demo gcs-secret \
 apiVersion: stash.appscode.com/v1alpha1
 kind: Repository
 metadata:
-  name: gcs-repo
+  name: azure-repo
   namespace: demo
 spec:
   backend:
-    gcs:
-      bucket: stash-shohag
-      prefix: /demo/mongoDB/sample-mongo
-    storageSecretName: gcs-secret
+    azure:
+      container: stash-shohag
+      prefix: /demo/deployment/my-deploy
+    storageSecretName: azure-secret
 ```
 
 This repository CRD specifies the gcs-secret we created before and stores the name and path to the gcs-bucket. It also specifies the location in the bucket where we want to backup our database.
@@ -316,7 +317,7 @@ metadata:
 spec:
   schedule: "*/5 * * * *"
   repository:
-    name: gcs-repo
+    name: azure-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
@@ -398,7 +399,7 @@ metadata:
   namespace: demo
 spec:
   repository:
-    name: gcs-repo
+    name: azure-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
