@@ -1,5 +1,5 @@
 ---
-title: How to Manage MariaDB in GKE Using KubeDB
+title: How to Manage MariaDB in Azure Using KubeDB
 date: 2021-04-23
 weight: 22
 authors:
@@ -298,20 +298,21 @@ kube-system   stash-stash-enterprise-77bd9869c6-9wjvv   2/2     Running   0     
 
 Stash supports various backends for storing data snapshots. It can be a cloud storage like GCS bucket, AWS S3, Azure Blob Storage etc. or a Kubernetes persistent volume like HostPath, PersistentVolumeClaim, NFS etc.
 
-For this tutorial we are going to use gcs-bucket. You can find other setups [here](https://stash.run/docs/v2021.04.12/guides/latest/backends/overview/).
+For this tutorial we are going to use Azure Blob Storage. You can find other setups [here](https://stash.run/docs/latest/guides/latest/backends/overview/).
 
  ![My Empty GCS bucket](gcsEmptyBucket.png)
 
-At first we need to create a secret so that we can access the gcs bucket. We can do that by the following code:
+At first we need to create a secret so that we can access the Azure Blob Storage. We can do that by the following code:
 
 ```bash
-$ echo -n 'YOURPASSWORD' > RESTIC_PASSWORD
-$ echo -n 'YOURPROJECTNAME' > GOOGLE_PROJECT_ID
-$ cat /PATH/TO/JSONKEY.json > GOOGLE_SERVICE_ACCOUNT_JSON_KEY
-$ kubectl create secret generic -n demo gcs-secret \
-        --from-file=./RESTIC_PASSWORD \
-        --from-file=./GOOGLE_PROJECT_ID \
-        --from-file=./GOOGLE_SERVICE_ACCOUNT_JSON_KEY
+$ echo -n 'changeit' > RESTIC_PASSWORD
+$ echo -n '<your-azure-storage-account-name>' > AZURE_ACCOUNT_NAME
+$ echo -n '<your-azure-storage-account-key>' > AZURE_ACCOUNT_KEY
+$ kubectl create secret generic -n demo azure-secret \
+    --from-file=./RESTIC_PASSWORD \
+    --from-file=./AZURE_ACCOUNT_NAME \
+    --from-file=./AZURE_ACCOUNT_KEY
+secret/azure-secret created
  ```
 
 ### Step 3: Create Repository
@@ -320,18 +321,18 @@ $ kubectl create secret generic -n demo gcs-secret \
 apiVersion: stash.appscode.com/v1alpha1
 kind: Repository
 metadata:
-  name: gcs-repo
+  name: azure-repo
   namespace: demo
 spec:
   backend:
-    gcs:
-      bucket: stash-shohag
-      prefix: /demo/mariaDB/sample-maria-backup
-    storageSecretName: gcs-secret
+    azure:
+      container: stash-shohag
+      prefix: /demo/deployment/my-deploy
+    storageSecretName: azure-secret
 ```
 
-This repository CRD specifies the gcs-secret we created before and stores the name and path to the gcs-bucket. It also specifies the location in the bucket where we want to backup our database.
-> My bucket name is stash-shohag. Don't forget to change `spec.backend.gcs.bucket` to your bucket name.
+This repository CRD specifies the azure-secret we created before and stores the name and path to the azure container. It also specifies the location in the storage where we want to backup our database.
+> My container name is stash-shohag. Don't forget to change `spec.backend.azure.container` to your bucket name.
 
 ### Step 4: Create BackupConfiguration
 
@@ -346,7 +347,7 @@ metadata:
 spec:
   schedule: "*/5 * * * *"
   repository:
-    name: gcs-repo
+    name: azure-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
@@ -440,7 +441,7 @@ metadata:
   namespace: demo
 spec:
   repository:
-    name: gcs-repo
+    name: azure-repo
   target:
     ref:
       apiVersion: appcatalog.appscode.com/v1alpha1
